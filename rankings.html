@@ -1,0 +1,42 @@
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Vendas - TIM Fibra - Rankings</title>
+  
+  <!-- Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>AGS TELECOM - Rankings</h1>
+      <nav>
+        <a href="index.html">Cadastro</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="rankings.html">Rankings</a>
+      </nav>
+    </header>
+    <main>
+      <section id="rankings-section" class="active">
+        <div class="ranking-section">
+          <div class="ranking-card supervisor-ranking">
+            <h3>Ranking de Supervisores</h3>
+            <!-- Supervisor rankings serão populadas via JS -->
+          </div>
+          <div class="ranking-card vendedor-ranking">
+            <h3>Ranking de Vendedores</h3>
+            <!-- Vendedor rankings serão populadas via JS -->
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="rankings.js"></script>
+</body>
+</html>

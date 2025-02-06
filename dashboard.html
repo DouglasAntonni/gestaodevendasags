@@ -1,0 +1,51 @@
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Vendas - TIM Fibra - Dashboard</title>
+  
+  <!-- Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>AGS TELECOM - DASHBOARD</h1>
+      <nav>
+        <a href="index.html">Cadastro</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="rankings.html">Rankings</a>
+      </nav>
+    </header>
+    <main>
+      <section id="dashboard-section" class="active">
+        <div class="filters">
+          <select id="period-filter">
+            <option value="daily" selected>Diário</option>
+            <option value="weekly">Semanal</option>
+            <option value="monthly">Mensal</option>
+          </select>
+        </div>
+        <div class="state-cards"></div>
+        <div class="charts-grid">
+          <div class="chart-container">
+            <canvas id="vendas-por-estado-chart"></canvas>
+          </div>
+          <div class="chart-container">
+            <canvas id="status-ordens-chart"></canvas>
+          </div>
+          <div class="chart-container">
+            <canvas id="metas-estados-chart"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

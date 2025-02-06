@@ -1,0 +1,304 @@
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Vendas - TIM Fibra - Cadastro</title>
+  
+  <!-- Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>AGS TELECOM - Cadastro de Vendas</h1>
+      <nav>
+        <a href="index.html">Cadastro</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="rankings.html">Rankings</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="cadastro-section" class="active">
+        <form id="venda-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="data-venda">Data da Venda</label>
+              <input type="date" id="data-venda" required>
+            </div>
+
+            <div class="form-group">
+              <label for="cliente">Cliente</label>
+              <input type="text" id="cliente" required>
+            </div>
+
+            <div class="form-group">
+              <label for="login">Login</label>
+              <input type="text" id="login" required>
+            </div>
+
+            <div class="form-group">
+              <label for="cpf">CPF</label>
+              <input type="text" id="cpf" required>
+            </div>
+
+            <div class="form-group">
+              <label for="vendedor">Vendedor</label>
+              <input type="text" id="vendedor" required>
+            </div>
+
+            <div class="form-group">
+              <label for="supervisor">Supervisor</label>
+              <input type="text" id="supervisor" required>
+            </div>
+
+            <div class="form-group">
+              <label for="oferta">Oferta</label>
+              <select id="oferta" required>
+                <option value="">Selecione</option>
+                <option>TIM Fibra 300M 24</option>
+                <option>TIM Fibra 400M 24</option>
+                <option>TIM Fibra 600M 24</option>
+                <option>TIM Fibra 600M P 24</option>
+                <option>TIM Fibra 600M M 24</option>
+                <option>TIM Fibra 1GB 24</option>
+                <option>TIM Fibra 1GB P 24</option>
+                <option>TIM Fibra 1GB M 24</option>
+                <option>TIM Fibra 2GB 24</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="valor">Valor</label>
+              <select id="valor" required>
+                <option value="">Selecione</option>
+                <option>90</option>
+                <option>110</option>
+                <option>130</option>
+                <option>150</option>
+                <option>160</option>
+                <option>170</option>
+                <option>180</option>
+                <option>200</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="biometria">Biometria</label>
+              <select id="biometria" required>
+                <option value="">Selecione</option>
+                <option>APROVADA</option>
+                <option>EM ANDAMENTO</option>
+                <option>NÃO FEZ</option>
+                <option>REPROVADA</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="ordem">Ordem</label>
+              <input type="text" id="ordem" required>
+            </div>
+
+            <div class="form-group">
+              <label for="status-ordem">Status da Ordem</label>
+              <select id="status-ordem" required>
+                <option value="">Selecione</option>
+                <option>CONCLUÍDO</option>
+                <option>EM ANDAMENTO</option>
+                <option>EM TRATAMENTO DOC/BIOMETRIA</option>
+                <option>EM TRATAMENTO CTOP</option>
+                <option>CANCELADA</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="sub-status-ordem">Sub-status da Ordem</label>
+              <select id="sub-status-ordem" required>
+                <option value="">Selecione</option>
+                <option>CONCLUÍDO</option>
+                <option>EM ANDAMENTO</option>
+                <option>EM TRATAMENTO DOC/BIOMETRIA</option>
+                <option>EM TRATAMENTO CTOP</option>
+                <option>CANCELADA</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="rede">Rede</label>
+              <select id="rede" required>
+                <option value="">Selecione</option>
+                <option>lHS</option>
+                <option>VTAL</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="tipo">Tipo</label>
+              <select id="tipo" required>
+                <option value="">Selecione</option>
+                <option>INPUT</option>
+                <option>REINPUT</option>
+                <option>CTOP</option>
+                <option>ALÇADA</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="tipo-cancelamento">Tipo de Cancelamento</label>
+              <select id="tipo-cancelamento">
+                <option value="">Selecione</option>
+                <option>TÉCNICO</option>
+                <option>COMERCIAL</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="estado">Estado</label>
+              <select id="estado" required>
+                <option value="">Selecione</option>
+                <option>PERNAMBUCO</option>
+                <option>BAHIA</option>
+                <option>CEARÁ</option>
+                <option>AMAZONAS</option>
+                <option>MINAS GERAIS</option>
+                <option>RIO DE JANEIRO</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="agendamento-1">Agendamento 1</label>
+              <input type="date" id="agendamento-1">
+            </div>
+
+            <div class="form-group">
+              <label for="finalizado-1">Finalizado 1</label>
+              <select id="finalizado-1">
+                <option value="">Selecione</option>
+                <option>SIM</option>
+                <option>NÃO</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="motivo-1">Motivo 1</label>
+              <input type="text" id="motivo-1">
+            </div>
+
+            <div class="form-group">
+              <label for="tratativa-1">Tratativa 1</label>
+              <input type="text" id="tratativa-1">
+            </div>
+
+            <div class="form-group">
+              <label for="observacao-1">Observação 1</label>
+              <textarea id="observacao-1"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="agendamento-2">Agendamento 2</label>
+              <input type="date" id="agendamento-2">
+            </div>
+
+            <div class="form-group">
+              <label for="finalizado-2">Finalizado 2</label>
+              <select id="finalizado-2">
+                <option value="">Selecione</option>
+                <option>SIM</option>
+                <option>NÃO</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="motivo-2">Motivo 2</label>
+              <input type="text" id="motivo-2">
+            </div>
+
+            <div class="form-group">
+              <label for="tratativa-2">Tratativa 2</label>
+              <input type="text" id="tratativa-2">
+            </div>
+
+            <div class="form-group">
+              <label for="observacao-2">Observação 2</label>
+              <textarea id="observacao-2"></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" id="btn-salvar">Salvar Venda</button>
+            <button type="reset" class="btn-secondary">Limpar</button>
+          </div>
+        </form>
+
+        <div class="vendas-lista">
+          <h3>Registro de Vendas</h3>
+          <div class="search-filters">
+            <input type="text" id="search-input" placeholder="Buscar vendas...">
+            <select id="search-field">
+              <option value="cliente">Cliente</option>
+              <option value="vendedor">Vendedor</option>
+              <option value="supervisor">Supervisor</option>
+              <option value="oferta">Oferta</option>
+              <option value="estado">Estado</option>
+              <option value="cpf">CPF</option>
+              <option value="statusOrdem">Status Ordem</option>
+            </select>
+            <select id="search-period">
+              <option value="all">Todos os Períodos</option>
+              <option value="today">Hoje</option>
+              <option value="thisWeek">Esta Semana</option>
+              <option value="thisMonth">Este Mês</option>
+            </select>
+            <button id="search-button" class="btn-primary">Buscar</button>
+            <button id="clear-search" class="btn-secondary">Limpar</button>
+          </div>
+          <table id="vendas-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Login</th>
+                <th>CPF</th>
+                <th>Vendedor</th>
+                <th>Supervisor</th>
+                <th>Oferta</th>
+                <th>Valor</th>
+                <th>Biometria</th>
+                <th>Ordem</th>
+                <th>Status Ordem</th>
+                <th>Sub-Status Ordem</th>
+                <th>Rede</th>
+                <th>Tipo</th>
+                <th>Tipo Cancelamento</th>
+                <th>Estado</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="vendas-tbody">
+              <!-- Vendas serão populadas via JS -->
+            </tbody>
+          </table>
+          <button id="load-more-btn" class="btn-primary" style="display:none;">Carregar Mais</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal-edicao" class="modal">
+    <div class="modal-content">
+      <!-- Conteúdo do modal de edição será preenchido via JS -->
+    </div>
+  </div>
+
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+  </div>
+
+  <script type="module" src="cadastro.js"></script>
+</body>
+</html>
