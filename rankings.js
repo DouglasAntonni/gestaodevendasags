@@ -6,7 +6,12 @@ class RankingsApp {
   }
 
   async loadRankings() {
-    const { data: vendas, error } = await supabase.from("vendas").select("*");
+    // Buscar apenas as vendas que foram concluídas
+    const { data: vendas, error } = await supabase
+      .from("vendas")
+      .select("*")
+      .eq("statusOrdem", "CONCLUÍDO"); // Filtrando vendas concluídas
+
     if (error) {
       console.error("Erro ao carregar vendas para rankings:", error);
       return;
@@ -17,23 +22,16 @@ class RankingsApp {
 
     vendas.forEach((venda) => {
       const supervisor = venda.supervisor || "N/A";
-      if (supervisorMap.has(supervisor)) {
-        supervisorMap.set(supervisor, supervisorMap.get(supervisor) + 1);
-      } else {
-        supervisorMap.set(supervisor, 1);
-      }
+      supervisorMap.set(supervisor, (supervisorMap.get(supervisor) || 0) + 1);
 
       const vendedor = venda.vendedor || "N/A";
-      if (vendedorMap.has(vendedor)) {
-        vendedorMap.set(vendedor, vendedorMap.get(vendedor) + 1);
-      } else {
-        vendedorMap.set(vendedor, 1);
-      }
+      vendedorMap.set(vendedor, (vendedorMap.get(vendedor) || 0) + 1);
     });
 
     const supervisorRanking = Array.from(supervisorMap.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
+
     const vendedorRanking = Array.from(vendedorMap.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);

@@ -54,7 +54,20 @@
 
             <div class="form-group">
               <label for="supervisor">Supervisor</label>
-              <input type="text" id="supervisor" required>
+              <select id="supervisor" required>
+                <option value="">Selecione</option>
+                <option>Pâmela Ingrid de Moura Santos</option>
+                <option>Thaís Barbosa de Oliveira</option>
+                <option>Guilherme Fernando C. dos Santos</option>
+                <option>Willian Gabriel de freitas souza</option>
+                <option>Alexsandra Gonçalves Cardoso</option>
+                <option>Antônio Marcos de Brito Silva</option>
+                <option>Genecy Germana Souza da Silva</option>
+                <option>Marcelo Vinicius Bernardo de Moura</option>
+                <option>Walcielison Candido de Andrade</option>
+                <option>Suzanne suellen de Freitas</option>
+                <option>Parceiros</option>
+              </select>
             </div>
 
             <div class="form-group">
@@ -124,7 +137,21 @@
                 <option>EM ANDAMENTO</option>
                 <option>EM TRATAMENTO DOC/BIOMETRIA</option>
                 <option>EM TRATAMENTO CTOP</option>
+                <option>AGENDADA</option>
                 <option>CANCELADA</option>
+                <option>EM EXECUÇÃO</option>
+                <option>SEM SLOTS DE AGENDAMENTO</option>
+                <option>PENDENCIADO</option>
+                <option>FINALIZADO SEM SUCESSO</option>
+                <option>ATRIBUÍDO</option>
+                <option>ENTREGUE AO TÉCNICO</option>
+                <option>EM DESLOCAMENTO</option>
+                <option>NÃO ATRIBUÍDO</option>
+                <option>ALÇADA</option>
+                <option>CONCLUÍDO SEM SUCESSO</option>
+                <option>RECEBIDO</option>
+                <option>ERRO NO PROCESSAMENTO</option>
+                <option>ERRO SERASA</option>
               </select>
             </div>
 
@@ -169,7 +196,18 @@
                 <option>RIO DE JANEIRO</option>
               </select>
             </div>
-
+            <div class="form-group">
+              <label for="responsavel">Responsável</label>
+              <select id="responsavel" name="responsavel" required>
+                <option value="">Selecione</option>
+                <option value="Mine">Mine</option>
+                <option value="Raquel">Raquel</option>
+                <option value="Jana">Jana</option>
+                <option value="Andreza">Andreza</option>
+                <option value="Deivson">Deivson</option>
+                <option value="Marcelo">Marcelo</option>
+              </select>
+            </div>
             <div class="form-group">
               <label for="agendamento-1">Agendamento 1</label>
               <input type="date" id="agendamento-1">
@@ -241,6 +279,7 @@
             <input type="text" id="search-input" placeholder="Buscar vendas...">
             <select id="search-field">
               <option value="cliente">Cliente</option>
+              <option value="responsavel">Responsável</option>
               <option value="vendedor">Vendedor</option>
               <option value="supervisor">Supervisor</option>
               <option value="oferta">Oferta</option>
@@ -261,6 +300,7 @@
             <thead>
               <tr>
                 <th>Data</th>
+                <th>Responsável</th>
                 <th>Cliente</th>
                 <th>Login</th>
                 <th>CPF</th>

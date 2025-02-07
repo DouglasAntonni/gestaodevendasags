@@ -75,6 +75,7 @@ class DashboardApp {
           biometriaReprovada: 0,
           canceladas: 0,
           emTratamento: 0,
+          emTratamentoCtop: 0,
           meta: 0,
           vendedores: []
         };
@@ -89,6 +90,12 @@ class DashboardApp {
         case 'EM ANDAMENTO':
           estadoData[estado].emAndamento++;
           break;
+          case 'EM TRATAMENTO CTOP':
+            estadoData[estado].emTratamentoCtop++;
+            break
+          case 'EM TRATAMENTO DOC/BIOMETRIA':
+            estadoData[estado].emTratamento++;
+            break;
         case 'CANCELADA':
           estadoData[estado].canceladas++;
           break;
@@ -163,8 +170,6 @@ class DashboardApp {
         ticketMedio: ticketMedio
       }
     };
-
-    localStorage.setItem('dashboardData', JSON.stringify(this.dados));
   }
 
 
@@ -201,11 +206,30 @@ class DashboardApp {
 
   renderStateCards() {
     const stateCardsContainer = document.querySelector('.state-cards');
+    stateCardsContainer.innerHTML = ''; // Limpa antes de renderizar
+
+    const fragment = document.createDocumentFragment(); // Reduz operações no DOM
+
+    // Criar e adicionar métricas gerais
+    fragment.appendChild(this.createMetricsCard(this.dados?.metricas || {}));
+
+    // Criar e adicionar os cards de estados
+    Object.entries(this.dados || {}).forEach(([estado, dadosEstado]) => {
+        if (estado !== 'metricas') {
+            fragment.appendChild(this.createStateCard(estado, dadosEstado));
+        }
+    });
+
+    stateCardsContainer.appendChild(fragment);
+
+    // Chamar função para adicionar eventos apenas uma vez
+    this.addBiometriaClickEvents();
+}
+
+// Função para criar o card de métricas gerais
+createMetricsCard(metricas) {
     const metricsCard = document.createElement('div');
     metricsCard.className = 'metrics-card';
-    
-    const metricas = this.dados?.metricas || {};
-
     metricsCard.innerHTML = `
       <h3>Métricas Gerais</h3>
       <div class="metrics-group">
@@ -219,94 +243,104 @@ class DashboardApp {
         </div>
       </div>
     `;
+    return metricsCard;
+}
 
-    stateCardsContainer.innerHTML = '';
-    stateCardsContainer.appendChild(metricsCard);
+// Função para criar um card de estado
+createStateCard(estado, dadosEstado) {
+    const card = document.createElement('div');
+    card.className = 'card';
 
-    // Continue with existing state cards
-    Object.entries(this.dados || {}).forEach(([estado, dadosEstado]) => {
-      if (estado === 'metricas') return; // Skip metrics object when rendering state cards
-    
-      const metaClass = dadosEstado.meta >= 80 ? 'badge-success' : 
-                       dadosEstado.meta >= 70 ? 'badge-warning' : 
-                       'badge-error';
+    // Define classe da meta
+    const metaClass =
+        dadosEstado.meta >= 80 ? 'badge-success' :
+        dadosEstado.meta >= 70 ? 'badge-warning' : 'badge-error';
+
+    card.innerHTML = `
+      <h3>${estado}</h3>
+      <div class="metric">
+        <span>Total de Ordens</span>
+        <strong>${dadosEstado.total || 0}</strong>
+      </div>
+      <div class="metric">
+        <span>Concluídas</span>
+        <strong>${dadosEstado.concluidas || 0}</strong>
+      </div>
+      <div class="metric biometria-clickable" data-estado="${estado}">
+        <span>Biometria Aprovada</span>
+        <strong>${dadosEstado.biometriaAprovada || 0}</strong>
+        <select class="period-select">
+          <option value="default" selected>Selecione o Período</option>
+          <option value="daily">Hoje</option>
+          <option value="weekly">Esta Semana</option>
+          <option value="monthly">Este Mês</option>
+        </select>
+      </div>
+      <div class="metric">
+        <span>Em Tratamento CTOP</span>
+        <strong>${dadosEstado.emTratamentoCtop || 0}</strong>
+      </div>
+      <div class="metric">
+        <span>Em Tratamento Doc/Biometria</span>
+        <strong>${dadosEstado.emTratamento || 0}</strong>
+      </div>
+         <div class="metric">
+        <span>Em Andamento</span>
+        <strong>${dadosEstado.emAndamento || 0}</strong>
+      </div>
       
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <h3>${estado}</h3>
-        <div class="metric">
-          <span>Total de Ordens</span>
-          <strong>${dadosEstado.total}</strong>
+      <div class="metric">
+        <span>Canceladas</span>
+        <strong>${dadosEstado.canceladas || 0}</strong>
+      </div>
+      <div class="metric">
+        <span>Meta Atingida</span>
+        <div class="badge ${metaClass}">
+          ${dadosEstado.meta || 0}%
         </div>
-        <div class="metric">
-          <span>Concluídas</span>
-          <strong>${dadosEstado.concluidas}</strong>
-        </div>
-        <div class="metric biometria-clickable" data-estado="${estado}">
-          <span>Biometria</span>
-          <strong>${dadosEstado.biometriaTotal || 0}</strong>
-          <select class="period-select">
-          <option value="">Selecione o Período</option>
-            <option value="daily">Hoje</option>
-            <option value="weekly">Esta Semana</option>
-            <option value="monthly">Este Mês</option>
-          </select>
-        </div>
-        <div class="metric">
-          <span>Em Andamento</span>
-          <strong>${dadosEstado.emAndamento}</strong>
-        </div>
-        <div class="metric">
-          <span>Canceladas</span>
-          <strong>${dadosEstado.canceladas}</strong>
-        </div>
-        <div class="metric">
-          <span>Meta Atingida</span>
-          <div class="badge ${metaClass}">
-            ${dadosEstado.meta}%
-          </div>
-        </div>
-      `;
-      stateCardsContainer.appendChild(card);
-    });
+      </div>
+    `;
 
-    // Add click event for biometria metrics
-    document.querySelectorAll('.biometria-clickable').forEach(element => {
-      const periodSelect = element.querySelector('.period-select');
-      
-      element.addEventListener('click', (event) => {
-        // Hide all other selects first
-        document.querySelectorAll('.period-select').forEach(select => {
-          if (select !== periodSelect) {
-            select.classList.remove('visible');
-          }
+    return card;
+}
+
+// Adiciona eventos de clique e seleção para biometria
+addBiometriaClickEvents() {
+    const biometricElements = document.querySelectorAll('.biometria-clickable');
+
+    biometricElements.forEach(element => {
+        const periodSelect = element.querySelector('.period-select');
+
+        element.addEventListener('click', (event) => {
+            event.stopPropagation();
+            // Oculta todos os outros selects antes de exibir o atual
+            document.querySelectorAll('.period-select').forEach(select => {
+                if (select !== periodSelect) {
+                    select.classList.remove('visible');
+                }
+            });
+
+            // Alterna visibilidade do select
+            periodSelect.classList.toggle('visible');
         });
 
-        // Toggle current select
-        if (event.target === element || event.target.parentNode === element) {
-          periodSelect.classList.toggle('visible');
-          event.stopPropagation();
-        }
-      });
+        // Evento de mudança no select para abrir modal
+        periodSelect.addEventListener('change', (event) => {
+            const estado = element.getAttribute('data-estado');
+            const period = event.target.value;
+            this.openBiometriaModal(estado, period);
+            periodSelect.classList.remove('visible');
+        });
 
-      // Handle period selection
-      periodSelect.addEventListener('change', (event) => {
-        const estado = element.getAttribute('data-estado');
-        const period = event.target.value;
-        this.openBiometriaModal(estado, period);
-        periodSelect.classList.remove('visible');
-        event.stopPropagation();
-      });
-
-      // Hide select when clicking outside
-      document.addEventListener('click', (event) => {
-        if (!element.contains(event.target)) {
-          periodSelect.classList.remove('visible');
-        }
-      });
+        // Esconde selects ao clicar fora
+        document.addEventListener('click', (event) => {
+            if (!element.contains(event.target)) {
+                periodSelect.classList.remove('visible');
+            }
+        });
     });
-  }
+}
+
 
   async openBiometriaModal(estado, selectedPeriod = 'daily') {
     const { data: vendas, error } = await supabase

@@ -24,6 +24,7 @@ class CadastroApp {
   async salvarVenda(form) {
     const venda = {
       dataVenda: form.querySelector("#data-venda").value,
+      responsavel: form.querySelector("#responsavel").value,
       cliente: form.querySelector("#cliente").value,
       login: form.querySelector("#login").value,
       cpf: form.querySelector("#cpf").value,
@@ -130,6 +131,7 @@ class CadastroApp {
         (venda) => `
       <tr>
         <td>${venda.dataVenda}</td>
+        <td>${venda.responsavel}</td> 
         <td>${venda.cliente}</td>
         <td>${venda.login}</td>
         <td>${venda.cpf}</td>
@@ -206,10 +208,10 @@ class CadastroApp {
   createEditInputs(venda) {
     return Object.entries(venda)
       .map(([key, value]) => {
-        if (key === "id") return "";
+        if (key === "id") return ""; // Ignora o campo "id"
         let inputType = "text";
         let inputOptions = "";
-
+  
         switch (key) {
           case "dataVenda":
           case "agendamento1":
@@ -221,6 +223,8 @@ class CadastroApp {
           case "oferta":
           case "valor":
           case "estado":
+          case "supervisor":
+          case "biometria": // Adicionado o caso para "biometria"
             inputType = "select";
             const options = {
               statusOrdem: [
@@ -231,10 +235,26 @@ class CadastroApp {
                 "CANCELADA",
               ],
               subStatusOrdem: [
-                "CONCLUÍDO",
-                "EM ANDAMENTO",
-                "EM TRATAMENTO DOC/BIOMETRIA",
-                "CANCELADA",
+                'CONCLUÍDO',
+                'EM ANDAMENTO',
+                'EM TRATAMENTO DOC/BIOMETRIA',
+                'CANCELADA',
+                'AGENDADA',
+                'EXECUÇÃO',
+                'SEM SLOTS DE AGENDAMENTO',
+                'PENDENCIADO',
+                'FINALIZADO SEM SUCESSO',
+                'ATRIBUÍDO',
+                'ENTREGUE AO TÉCNICO',
+                'EM DESLOCAMENTO',
+                'NÃO ATRIBUÍDO',
+                'FALHA SISTÊMICA',
+                'NÃO ATRIBUÍDO',
+                'ALÇADA',
+                'CONCLUÍDO SEM SUCESSO',
+                'RECEBIDO',
+                'ERRO NO PROCESSAMENTO',
+                'ERRO SERASA',
               ],
               oferta: [
                 "TIM Fibra 300M 24",
@@ -255,6 +275,33 @@ class CadastroApp {
                 "AMAZONAS",
                 "MINAS GERAIS",
                 "RIO DE JANEIRO"
+              ],
+              responsavel: [
+                "Mine",
+                "Raquel",
+                "Jana",
+                "Andreza",
+                "Deivson",
+                "Marcelo"
+              ],
+              supervisor: [
+                "Pâmela Ingrid de Moura Santos",
+                "Thaís Barbosa de Oliveira",
+                "Guilherme Fernando C. dos Santos",
+                "Willian Gabriel de Freitas Souza",
+                "Alexsandra Gonçalves Cardoso",
+                "Antônio Marcos de Brito Silva",
+                "Genecy Germana Souza da Silva",
+                "Marcelo Vinicius Bernardo de Moura",
+                "Walcielison Candido de Andrade",
+                "Suzanne Suellen de Freitas",
+                "Parceiros"
+              ],
+              biometria: [ // Opções para o campo "biometria"
+                "APROVADA",
+                "EM ANDAMENTO",
+                "NÃO FEZ",
+                "REPROVADA"
               ]
             };
             inputOptions =
@@ -265,13 +312,16 @@ class CadastroApp {
                 )
                 .join("") || "";
             break;
+          default:
+            inputType = "text"; // Caso padrão para campos não tratados
+            break;
         }
-
+  
         const label = key
           .split(/(?=[A-Z])/)
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
           .join(" ");
-
+  
         if (inputType === "select") {
           return `
           <div class="form-group">
@@ -282,11 +332,11 @@ class CadastroApp {
           </div>
         `;
         }
-
+  
         return `
           <div class="form-group">
             <label for="edit-${key}">${label}</label>
-            <input type="${inputType}" id="edit-${key}" name="${key}" value="${value}">
+            <input type="${inputType}" id="edit-${key}" name="${key}" value="${value || ""}">
           </div>
         `;
       })
@@ -382,40 +432,44 @@ class CadastroApp {
     const searchInput = document.getElementById("search-input").value.trim();
     const searchField = document.getElementById("search-field").value;
     const searchPeriod = document.getElementById("search-period").value;
-
-    const { data: vendas, error } = await supabase.from("vendas").select("*");
-
+  
+    const { data: vendas, error } = await supabase
+      .from("vendas")
+      .select("*")
+      .order("dataVenda", { ascending: false }); // Ordena por data decrescente
+  
     if (error) {
       console.error("Erro ao buscar dados do Supabase:", error);
       return;
     }
-
+  
     const normalizeText = (text) =>
       text
+        .replace(/\s+/g, "")
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-zA-Z0-9]/g, "")
         .toLowerCase();
-
+  
     let filteredVendas = vendas.filter((venda) => {
       if (!searchInput) return true;
       const fieldValue = normalizeText(String(venda[searchField] || ""));
       const searchValue = normalizeText(searchInput);
       return fieldValue.includes(searchValue);
     });
-
+  
     if (searchPeriod && searchPeriod !== "all") {
       filteredVendas = this.filterSearchByPeriod(filteredVendas, searchPeriod);
     }
-
+  
     this.renderSearchResults(filteredVendas);
   }
-
+  
   filterSearchByPeriod(vendas, period) {
     const hoje = new Date();
     hoje.setHours(23, 59, 59, 999);
-
-    return vendas.filter((venda) => {
+  
+    const filtered = vendas.filter((venda) => {
       const dataVenda = this.parseDate(venda.dataVenda);
       if (isNaN(dataVenda)) {
         console.warn(`Data inválida: ${venda.dataVenda}`);
@@ -438,23 +492,73 @@ class CadastroApp {
           return true;
       }
     });
+  
+    // Ordena as vendas filtradas por data decrescente
+    return filtered.sort((a, b) => {
+      const dataA = this.parseDate(a.dataVenda);
+      const dataB = this.parseDate(b.dataVenda);
+      return dataB - dataA; // Ordena da mais recente para a mais antiga
+    });
   }
 
+  filterSearchByPeriod(vendas, period) {
+    const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
+  
+    const filtered = vendas.filter((venda) => {
+      const dataVenda = this.parseDate(venda.dataVenda);
+      if (isNaN(dataVenda)) {
+        console.warn(`Data inválida: ${venda.dataVenda}`);
+        return false;
+      }
+      switch (period) {
+        case "today":
+          return this.isSameDay(dataVenda, hoje);
+        case "thisWeek":
+          const inicioSemana = new Date(hoje);
+          const diaSemana = inicioSemana.getDay();
+          const diferenca = diaSemana === 0 ? 6 : diaSemana - 1;
+          inicioSemana.setDate(hoje.getDate() - diferenca);
+          inicioSemana.setHours(0, 0, 0, 0);
+          return dataVenda >= inicioSemana && dataVenda <= hoje;
+        case "thisMonth":
+          const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+          return dataVenda >= inicioMes && dataVenda <= hoje;
+        default:
+          return true;
+      }
+    });
+  
+    // Ordena as vendas filtradas por data decrescente
+    return filtered.sort((a, b) => {
+      const dataA = this.parseDate(a.dataVenda);
+      const dataB = this.parseDate(b.dataVenda);
+      return dataB - dataA; // Ordena da mais recente para a mais antiga
+    });
+  }
   parseDate(dateString) {
     if (!dateString) return null;
+    // Se a data estiver no formato 'YYYY-MM-DD'
+    if (dateString.includes("-")) {
+      const [ano, mes, dia] = dateString.split("-");
+      return new Date(ano, mes - 1, dia); // Mês é 0-indexado no JavaScript
+    }
+    // Se a data estiver no formato 'DD/MM/YYYY'
     if (dateString.includes("/")) {
       const [dia, mes, ano] = dateString.split("/");
-      return new Date(`${ano}-${mes}-${dia}`);
+      return new Date(ano, mes - 1, dia); // Mês é 0-indexado no JavaScript
+      
     }
     return new Date(dateString);
+    
   }
-
+  
   isSameDay(date1, date2) {
-    return (
-      date1.getFullYear() === date2.getFullYear() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getDate() === date2.getDate()
-    );
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
+    return d1.getTime() === d2.getTime();
   }
 
   renderSearchResults(filteredVendas) {
@@ -473,7 +577,8 @@ class CadastroApp {
       .map(
         (venda) => `
       <tr>
-        <td>${venda.dataVenda}</td>
+        <td>${venda.dataVenda}</td>]
+        <td>${venda.responsavel}</td>
         <td>${venda.cliente}</td>
         <td>${venda.login}</td>
         <td>${venda.cpf}</td>

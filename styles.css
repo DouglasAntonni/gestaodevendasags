@@ -1,8 +1,8 @@
 :root {
-  --primary-blue: #1E88E5;
-  --secondary-blue: #6AB7FF;
-  --background-blue: #E3F2FD;
-  --text-color: #333;
+  --primary-blue: #0D47A1;
+  --secondary-blue: #1976D2;
+  --background-blue: #F5F7FA;
+  --text-color: #333333;
   --white: #FFFFFF;
 }
 
@@ -26,7 +26,7 @@ body {
 }
 
 header {
-  background-color: var(--primary-blue);
+  background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
   color: white;
   padding: 15px;
   border-radius: 8px;
@@ -37,7 +37,7 @@ header {
 }
 
 nav a {
-  background-color: var(--secondary-blue);
+  border: 1px solid white;
   color: white;
   text-decoration: none;
   padding: 10px 15px;
@@ -102,11 +102,12 @@ nav a:hover {
   padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s ease, transform 0.2s;
 }
 
 .btn-primary:hover {
   background-color: var(--secondary-blue);
+  transform: translateY(-2px);
 }
 
 .btn-secondary {
@@ -116,11 +117,12 @@ nav a:hover {
   padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s ease;
 }
 
 .btn-secondary:hover {
   background-color: #e0e0e0;
+  transform: translateY(-2px);
 }
 
 #dashboard-section {
@@ -822,4 +824,10 @@ nav a:hover {
     opacity: 1;
     transform: translateY(0);
   }
+}
+.state-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
 }
