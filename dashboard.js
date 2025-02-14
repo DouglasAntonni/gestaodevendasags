@@ -9,12 +9,14 @@ class DashboardApp {
     };
     this.dados = { metricas: {} };
     this.setupDashboard();
+    this.updateDashboard();
+    this.subscribeToVendas();
+ 
   }
 
   setupDashboard() {
     const periodFilter = document.getElementById("period-filter");
     periodFilter.addEventListener("change", () => this.updateDashboard());
-    this.updateDashboard();
   }
 
   async updateDashboard() {
@@ -26,18 +28,17 @@ class DashboardApp {
 
   async computeDashboardData(period = 'daily') {
     const { data: vendas, error } = await supabase
-    .from('vendas')
-    .select('*');
+      .from('vendas')
+      .select('*');
 
-  if (error) {
-    console.error('Erro ao carregar vendas:', error);
-    return;
-  }
+    if (error) {
+      console.error('Erro ao carregar vendas:', error);
+      return;
+    }
 
-  const vendasFiltradas = this.filterByPeriod(vendas, period);
-  const estadoData = {};
+    const vendasFiltradas = this.filterByPeriod(vendas, period);
 
-    // Additional variables for tracking offers and ticket
+    // Variáveis para métricas gerais
     let ofertasCount = {};
     let totalValor = 0;
     let totalVendasConcluidas = 0;
@@ -47,22 +48,17 @@ class DashboardApp {
       'PERNAMBUCO': 316,
       'BAHIA': 75,
       'CEARÁ': 285,
-      'AMAZONAS': 75,
+      'AMAZONAS': 100,
       'MINAS GERAIS': 300,
       'RIO DE JANEIRO': 75
     };
 
-    vendasFiltradas.forEach(venda => {
-      // Count offers
-      ofertasCount[venda.oferta] = (ofertasCount[venda.oferta] || 0) + 1;
-      
-      // Sum values for completed sales
-      if (venda.statusOrdem === 'CONCLUÍDO') {
-        totalValor += parseFloat(venda.valor) || 0;
-        totalVendasConcluidas++;
-      }
+    const estadoData = {};
 
+    vendasFiltradas.forEach(venda => {
       const estado = venda.estado;
+
+      // Inicializa os dados do estado, se necessário
       if (!estadoData[estado]) {
         estadoData[estado] = {
           total: 0,
@@ -76,37 +72,48 @@ class DashboardApp {
           canceladas: 0,
           emTratamento: 0,
           emTratamentoCtop: 0,
+          reinput: 0,
           meta: 0,
           vendedores: []
         };
       }
 
+      // Contagem geral de vendas por estado
       estadoData[estado].total++;
 
+      // Verifica se a venda foi concluída
+      if (venda.statusOrdem === 'CONCLUÍDO') {
+        estadoData[estado].concluidas++;
+        totalVendasConcluidas++;
+
+        // Soma o valor da venda concluída
+        totalValor += parseFloat(venda.valor) || 0;
+
+        // Conta a oferta da venda concluída
+        ofertasCount[venda.oferta] = (ofertasCount[venda.oferta] || 0) + 1;
+      }
+      if (venda.tipo === 'REINPUT') {
+        estadoData[estado].reinput++;
+      }
+      // Outros status
       switch (venda.statusOrdem) {
-        case 'CONCLUÍDO':
-          estadoData[estado].concluidas++;
-          break;
         case 'EM ANDAMENTO':
           estadoData[estado].emAndamento++;
           break;
-          case 'EM TRATAMENTO CTOP':
-            estadoData[estado].emTratamentoCtop++;
-            break
-          case 'EM TRATAMENTO DOC/BIOMETRIA':
-            estadoData[estado].emTratamento++;
-            break;
+        case 'EM TRATAMENTO CTOP':
+          estadoData[estado].emTratamentoCtop++;
+          break;
+        case 'EM TRATAMENTO DOC/BIOMETRIA':
+          estadoData[estado].emTratamento++;
+          break;
         case 'CANCELADA':
           estadoData[estado].canceladas++;
           break;
-        default:
-          console.warn(`Status desconhecido encontrado: ${venda.statusOrdem}`);
       }
 
-      // Verifica e conta os diferentes status de biometria
+      // Contagem de biometria
       if (venda.biometria) {
-        estadoData[estado].biometriaTotal++; // Conta todas as biometrias registradas
-
+        estadoData[estado].biometriaTotal++;
         switch (venda.biometria) {
           case 'APROVADA':
             estadoData[estado].biometriaAprovada++;
@@ -120,12 +127,10 @@ class DashboardApp {
           case 'REPROVADA':
             estadoData[estado].biometriaReprovada++;
             break;
-          default:
-            console.warn(`Status de biometria desconhecido: ${venda.biometria}`);
         }
       }
 
-      // Add or update vendedor
+      // Adiciona vendedor ao estado
       const vendedorExistente = estadoData[estado].vendedores.find(v => v.nome === venda.vendedor);
       if (vendedorExistente) {
         vendedorExistente.vendas++;
@@ -136,30 +141,28 @@ class DashboardApp {
           supervisor: venda.supervisor,
           estado: venda.estado,
           vendas: 1,
-          taxaConversao: 80
+          taxaConversao: 80 // Exemplo de taxa de conversão
         });
       }
     });
 
-    // After counting all sales, calculate the meta percentage
+    // Calcula a meta atingida por estado
     Object.keys(estadoData).forEach(estado => {
-      const meta = metaDiaria[estado] || 75; // Default to 75 if not specified
+      const meta = metaDiaria[estado] || 75; // Meta padrão
       const concluidas = estadoData[estado].concluidas;
-      
-      // Calculate percentage: (completed sales / target) * 100
       estadoData[estado].meta = Math.round((concluidas / meta) * 100);
     });
 
-    // Calculate most sold offer
+    // Calcula a oferta mais vendida
     const ofertaMaisVendida = Object.entries(ofertasCount)
-      .sort(([,a], [,b]) => b - a)[0] || ['Nenhuma', 0];
+      .sort(([, a], [, b]) => b - a)[0] || ['Nenhuma', 0];
 
-    // Calculate average ticket
-    const ticketMedio = totalVendasConcluidas > 0 
+    // Calcula o ticket médio
+    const ticketMedio = totalVendasConcluidas > 0
       ? (totalValor / totalVendasConcluidas).toFixed(2)
       : 0;
 
-    // Store the metrics
+    // Armazena os dados
     this.dados = {
       ...estadoData,
       metricas: {
@@ -172,24 +175,21 @@ class DashboardApp {
     };
   }
 
-
   filterByPeriod(vendas, period) {
     const hoje = new Date();
-    hoje.setHours(23, 59, 59, 999); // End of current day
-  
+    hoje.setHours(23, 59, 59, 999); // Fim do dia atual
+
     let inicioPeriodo = new Date(hoje);
-    inicioPeriodo.setHours(0, 0, 0, 0); // Start of current day
+    inicioPeriodo.setHours(0, 0, 0, 0); // Início do dia atual
 
-    console.log('Filtro:', period, 'Data inicial:', inicioPeriodo, 'Data final:', hoje);
-
-    switch(period) {
+    switch (period) {
       case 'weekly':
-        inicioPeriodo.setDate(hoje.getDate() - 7);
+        inicioPeriodo.setDate(hoje.getDate() - hoje.getDay()); // Primeiro dia da semana (domingo)
         break;
       case 'monthly':
-        inicioPeriodo.setMonth(hoje.getMonth() - 1);
+        inicioPeriodo.setDate(1); // Primeiro dia do mês
         break;
-      // Daily is default
+      // Diário é o padrão
     }
 
     return vendas.filter(venda => {
@@ -215,19 +215,18 @@ class DashboardApp {
 
     // Criar e adicionar os cards de estados
     Object.entries(this.dados || {}).forEach(([estado, dadosEstado]) => {
-        if (estado !== 'metricas') {
-            fragment.appendChild(this.createStateCard(estado, dadosEstado));
-        }
+      if (estado !== 'metricas') {
+        fragment.appendChild(this.createStateCard(estado, dadosEstado));
+      }
     });
 
     stateCardsContainer.appendChild(fragment);
 
     // Chamar função para adicionar eventos apenas uma vez
     this.addBiometriaClickEvents();
-}
+  }
 
-// Função para criar o card de métricas gerais
-createMetricsCard(metricas) {
+  createMetricsCard(metricas) {
     const metricsCard = document.createElement('div');
     metricsCard.className = 'metrics-card';
     metricsCard.innerHTML = `
@@ -244,16 +243,15 @@ createMetricsCard(metricas) {
       </div>
     `;
     return metricsCard;
-}
+  }
 
-// Função para criar um card de estado
-createStateCard(estado, dadosEstado) {
+  createStateCard(estado, dadosEstado) {
     const card = document.createElement('div');
     card.className = 'card';
 
     // Define classe da meta
     const metaClass =
-        dadosEstado.meta >= 80 ? 'badge-success' :
+      dadosEstado.meta >= 80 ? 'badge-success' :
         dadosEstado.meta >= 70 ? 'badge-warning' : 'badge-error';
 
     card.innerHTML = `
@@ -284,11 +282,14 @@ createStateCard(estado, dadosEstado) {
         <span>Em Tratamento Doc/Biometria</span>
         <strong>${dadosEstado.emTratamento || 0}</strong>
       </div>
-         <div class="metric">
+       <div class="metric">
+        <span>Reinput</span>
+        <strong>${dadosEstado.reinput || 0}</strong>
+      </div>
+      <div class="metric">
         <span>Em Andamento</span>
         <strong>${dadosEstado.emAndamento || 0}</strong>
       </div>
-      
       <div class="metric">
         <span>Canceladas</span>
         <strong>${dadosEstado.canceladas || 0}</strong>
@@ -302,55 +303,54 @@ createStateCard(estado, dadosEstado) {
     `;
 
     return card;
-}
+  }
 
-// Adiciona eventos de clique e seleção para biometria
-addBiometriaClickEvents() {
+  addBiometriaClickEvents() {
     const biometricElements = document.querySelectorAll('.biometria-clickable');
 
     biometricElements.forEach(element => {
-        const periodSelect = element.querySelector('.period-select');
+      const periodSelect = element.querySelector('.period-select');
 
-        element.addEventListener('click', (event) => {
-            event.stopPropagation();
-            // Oculta todos os outros selects antes de exibir o atual
-            document.querySelectorAll('.period-select').forEach(select => {
-                if (select !== periodSelect) {
-                    select.classList.remove('visible');
-                }
-            });
-
-            // Alterna visibilidade do select
-            periodSelect.classList.toggle('visible');
+      element.addEventListener('click', (event) => {
+        event.stopPropagation();
+        // Oculta todos os outros selects antes de exibir o atual
+        document.querySelectorAll('.period-select').forEach(select => {
+          if (select !== periodSelect) {
+            select.classList.remove('visible');
+          }
         });
 
-        // Evento de mudança no select para abrir modal
-        periodSelect.addEventListener('change', (event) => {
-            const estado = element.getAttribute('data-estado');
-            const period = event.target.value;
-            this.openBiometriaModal(estado, period);
-            periodSelect.classList.remove('visible');
-        });
+        // Alterna visibilidade do select
+        periodSelect.classList.toggle('visible');
+      });
 
-        // Esconde selects ao clicar fora
-        document.addEventListener('click', (event) => {
-            if (!element.contains(event.target)) {
-                periodSelect.classList.remove('visible');
-            }
-        });
+      // Evento de mudança no select para abrir modal
+      periodSelect.addEventListener('change', (event) => {
+        const estado = element.getAttribute('data-estado');
+        const period = event.target.value;
+        this.openBiometriaModal(estado, period);
+        periodSelect.classList.remove('visible');
+      });
+
+      // Esconde selects ao clicar fora
+      document.addEventListener('click', (event) => {
+        if (!element.contains(event.target)) {
+          periodSelect.classList.remove('visible');
+        }
+      });
     });
-}
-
+  }
 
   async openBiometriaModal(estado, selectedPeriod = 'daily') {
     const { data: vendas, error } = await supabase
-    .from('vendas')
-    .select('*');
+      .from('vendas')
+      .select('*');
 
-  if (error) {
-    console.error('Erro ao buscar vendas:', error);
-    return;
-  }
+    if (error) {
+      console.error('Erro ao buscar vendas:', error);
+      return;
+    }
+
     const vendasFiltradas = this.filterByPeriod(vendas, selectedPeriod);
     const estadoVendas = vendasFiltradas.filter(venda => venda.estado === estado);
 
@@ -380,7 +380,6 @@ addBiometriaClickEvents() {
         <button class="close-btn">&times;</button>
         <h2>Status da Biometria</h2>
         <div class="period-title">${estado} - ${periodTitle[selectedPeriod]}</div>
-        
         <div class="biometria-stats">
           <div class="stat-item aprovada">
             <span>Aprovada</span>
@@ -551,6 +550,19 @@ addBiometriaClickEvents() {
         },
       }
     );
+  }
+
+  subscribeToVendas() {
+    supabase
+      .from('vendas')
+      .on('UPDATE', payload => {
+        // Se a venda foi previamente categorizada como "REINPUT" e agora foi alterada para um tipo diferente:
+        if (payload.old && payload.new && payload.old.tipo === 'REINPUT' && payload.new.tipo !== 'REINPUT') {
+          console.log('Venda atualizada de REINPUT para outro tipo:', payload);
+          this.updateDashboard();
+        }
+      })
+      .subscribe();
   }
 }
 

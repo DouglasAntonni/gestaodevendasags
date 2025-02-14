@@ -24,6 +24,10 @@
     </header>
     <main>
       <section id="rankings-section" class="active">
+        <div class="filters">
+          <label for="month-selector">Selecione o Mês:</label>
+          <select id="month-selector"></select>
+        </div>
         <div class="ranking-section">
           <div class="ranking-card supervisor-ranking">
             <h3>Ranking de Supervisores</h3>
@@ -35,8 +39,14 @@
           </div>
         </div>
       </section>
+      
     </main>
   </div>
   <script type="module" src="rankings.js"></script>
+  <script>
+    setInterval(() => {
+   window.location.reload();
+ }, 1800000);
+</script>
 </body>
 </html>

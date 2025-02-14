@@ -831,3 +831,190 @@ nav a:hover {
   gap: 15px;
   margin-bottom: 20px;
 }
+
+/*createStateCard(estado, dadosEstado) {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  // Define classe da meta
+  const metaClass =
+    dadosEstado.meta >= 80 ? 'badge-success' :
+      dadosEstado.meta >= 70 ? 'badge-warning' : 'badge-error';
+
+  card.innerHTML = `
+    <h3>${estado}</h3>
+    <div class="metric">
+      <span>Total de Ordens</span>
+      <strong>${dadosEstado.total || 0}</strong>
+    </div>
+    <div class="metric">
+      <span>Concluídas</span>
+      <strong>${dadosEstado.concluidas || 0}</strong>
+    </div>
+    <div class="metric biometria-clickable" data-estado="${estado}">
+      <span>Biometria Aprovada</span>
+      <strong>${dadosEstado.biometriaAprovada || 0}</strong>
+      <select class="period-select">
+        <option value="default" selected>Selecione o Período</option>
+        <option value="daily">Hoje</option>
+        <option value="weekly">Esta Semana</option>
+        <option value="monthly">Este Mês</option>
+      </select>
+    </div>
+    <div class="metric">
+      <span>Em Tratamento CTOP</span>
+      <strong>${dadosEstado.emTratamentoCtop || 0}</strong>
+    </div>
+    <div class="metric">
+      <span>Em Tratamento Doc/Biometria</span>
+      <strong>${dadosEstado.emTratamento || 0}</strong>
+    </div>
+       <div class="metric">
+      <span>Em Andamento</span>
+      <strong>${dadosEstado.emAndamento || 0}</strong>
+    </div>
+    
+    <div class="metric">
+      <span>Canceladas</span>
+      <strong>${dadosEstado.canceladas || 0}</strong>
+    </div>
+    <div class="metric">
+      <span>Meta Atingida</span>
+      <div class="badge ${metaClass}">
+        ${dadosEstado.meta || 0}%
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
+// Adiciona eventos de clique e seleção para biometria
+addBiometriaClickEvents() {
+  const biometricElements = document.querySelectorAll('.biometria-clickable');
+
+  biometricElements.forEach(element => {
+    const periodSelect = element.querySelector('.period-select');
+
+    element.addEventListener('click', (event) => {
+      event.stopPropagation();
+      // Oculta todos os outros selects antes de exibir o atual
+      document.querySelectorAll('.period-select').forEach(select => {
+        if (select !== periodSelect) {
+          select.classList.remove('visible');
+        }
+      });
+
+      // Alterna visibilidade do select
+      periodSelect.classList.toggle('visible');
+    });
+
+    // Evento de mudança no select para abrir modal
+    periodSelect.addEventListener('change', (event) => {
+      const estado = element.getAttribute('data-estado');
+      const period = event.target.value;
+      this.openBiometriaModal(estado, period);
+      periodSelect.classList.remove('visible');
+    });
+
+    // Esconde selects ao clicar fora
+    document.addEventListener('click', (event) => {
+      if (!element.contains(event.target)) {
+        periodSelect.classList.remove('visible');
+      }
+    });
+  });
+}
+
+
+async openBiometriaModal(estado, selectedPeriod = 'daily') {
+  const { data: vendas, error } = await supabase
+    .from('vendas')
+    .select('*');
+
+  if (error) {
+    console.error('Erro ao buscar vendas:', error);
+    return;
+  }
+  const vendasFiltradas = this.filterByPeriod(vendas, selectedPeriod);
+  const estadoVendas = vendasFiltradas.filter(venda => venda.estado === estado);
+
+  const biometriaData = {
+    'APROVADA': 0,
+    'EM ANDAMENTO': 0,
+    'REPROVADA': 0,
+    'NÃO FEZ': 0
+  };
+
+  estadoVendas.forEach(venda => {
+    const status = venda.biometria || 'NÃO FEZ';
+    biometriaData[status]++;
+  });
+
+  const periodTitle = {
+    'daily': 'Hoje',
+    'weekly': 'Esta Semana',
+    'monthly': 'Este Mês'
+  };
+
+  const modal = document.createElement('div');
+  modal.className = 'biometria-modal';
+  modal.style.opacity = '0';
+  modal.innerHTML = `
+    <div class="biometria-modal-content">
+      <button class="close-btn">&times;</button>
+      <h2>Status da Biometria</h2>
+      <div class="period-title">${estado} - ${periodTitle[selectedPeriod]}</div>
+      
+      <div class="biometria-stats">
+        <div class="stat-item aprovada">
+          <span>Aprovada</span>
+          <strong>${biometriaData['APROVADA']}</strong>
+        </div>
+        <div class="stat-item em-andamento">
+          <span>Em Andamento</span>
+          <strong>${biometriaData['EM ANDAMENTO']}</strong>
+        </div>
+        <div class="stat-item reprovada">
+          <span>Reprovada</span>
+          <strong>${biometriaData['REPROVADA']}</strong>
+        </div>
+        <div class="stat-item nao-fez">
+          <span>Não Realizou</span>
+          <strong>${biometriaData['NÃO FEZ']}</strong>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Add fade-in effect
+  requestAnimationFrame(() => {
+    modal.style.opacity = '1';
+  });
+
+  // Closing functionality
+  const closeModal = () => {
+    modal.style.opacity = '0';
+    setTimeout(() => {
+      document.body.removeChild(modal);
+    }, 300);
+  };
+
+  const closeBtn = modal.querySelector('.close-btn');
+  closeBtn.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+
+  // Add escape key listener
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
+}
