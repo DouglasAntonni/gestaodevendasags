@@ -173,7 +173,7 @@ class DashboardApp {
 
     // Percentual de vendas atingido
     const percentualAtingido = metaVendas > 0 ? Math.round((total / metaVendas) * 100) : 0;
-    const percentualAtingidoDiario = percentualAtingido > 0 ? Math.round((metaVendas / percentualAtingido) * 100) : 0;
+    
     
     return {
       total,
@@ -186,7 +186,7 @@ class DashboardApp {
       reinput,
       metaVendas, // Meta de vendas
       percentualAtingido ,
-      percentualAtingidoDiario
+      
     };
   }
 
@@ -194,8 +194,7 @@ class DashboardApp {
     const metaClass =
       dadosEstado.percentualAtingido >= 80 ? "badge-success" :
       dadosEstado.percentualAtingido >= 70 ? "badge-warning" : "badge-error";
-      dadosEstado.percentualAtingidoDiario >= 80 ? "badge-success" :
-      dadosEstado.percentualAtingidoDiario >= 70 ? "badge-warning" : "badge-error";
+     
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
