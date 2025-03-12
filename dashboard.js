@@ -237,11 +237,7 @@ class DashboardApp {
         <span>Canceladas</span>
         <strong>${dadosEstado.canceladas || 0}</strong>
       </div>
-       <div class="metric">
-        <span>Meta Atingida</span>
-        <div class="badge ${metaClass}">
-          ${dadosEstado.percentualAtingidoDiario || 0}%
-        </div>
+        
       <div class="metric">
         <span>Meta Atingida</span>
         <div class="badge ${metaClass}">
