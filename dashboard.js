@@ -2,258 +2,202 @@ import { supabase } from "./supabaseClient.js";
 
 class DashboardApp {
   constructor() {
-    this.charts = {
-      vendasPorEstado: null,
-      statusOrdens: null,
-      metasEstados: null,
+    this.vendas = [];
+    this.periodFilter = document.getElementById("period-filter");
+    this.managerFilter = document.getElementById("manager-filter");
+    this.stateCardsContainer = document.querySelector(".state-cards");
+    this.supervisorFilter = document.getElementById("supervisor-filter");
+    // Chart instances
+    this.stateChart = null;
+    this.statusChart = null;
+    this.metaChart = null;
+    this.biometriaChart = null;
+    // Metas estáticas por estado
+    this.metasVendas = {
+      "PERNAMBUCO": 209,
+      "BAHIA": 120,
+      "CEARÁ": 300,
+      "AMAZONAS": 75,
+      "MINAS GERAIS": 305,
+      "RIO DE JANEIRO": 70
     };
-    this.dados = { metricas: {} };
-    this.setupDashboard();
-    this.updateDashboard();
-    this.subscribeToVendas();
- 
+    // Initialize filters and load data
+    this.initializeFilters();
+    this.loadVendas();
+    window.addEventListener("saleUpdated", this.loadVendas.bind(this));
   }
 
-  setupDashboard() {
-    const periodFilter = document.getElementById("period-filter");
-    periodFilter.addEventListener("change", () => this.updateDashboard());
+  initializeFilters() {
+    if (this.periodFilter) {
+      this.periodFilter.addEventListener("change", () => this.applyFilters());
+    }
+    if (this.managerFilter) {
+      this.managerFilter.addEventListener("change", () => this.applyFilters());
+    }
+    if (this.supervisorFilter) {
+      this.supervisorFilter.addEventListener("change", () => this.applyFilters());
+    }
   }
 
-  async updateDashboard() {
-    const period = document.getElementById("period-filter").value || "daily";
-    await this.computeDashboardData(period);
-    this.renderStateCards();
-    this.renderCharts();
-  }
-
-  async computeDashboardData(period = 'daily') {
-    const { data: vendas, error } = await supabase
-      .from('vendas')
-      .select('*');
-
+  async loadVendas() {
+    const { data, error } = await supabase
+      .from("vendas")
+      .select("*")
+      .order("dataVenda", { ascending: false });
     if (error) {
-      console.error('Erro ao carregar vendas:', error);
+      console.error("Erro ao carregar vendas:", error);
       return;
     }
+    this.vendas = data;
+    this.applyFilters();
+  }
 
-    const vendasFiltradas = this.filterByPeriod(vendas, period);
+  applyFilters() {
+    const period = this.periodFilter.value; // daily, weekly, monthly
+    const manager = this.managerFilter.value; // e.g., "all", "Taciana", "Dourado"
+    const supervisor = this.supervisorFilter.value; // e.g., "all", "Pâmela Ingrid de Moura Santos", etc.
+    
+    let filtered = this.filterByPeriod(this.vendas, period);
+  
+    // Filtro por gerente
+    if (manager !== "all") {
+      filtered = filtered.filter(venda => {
+        const gerente = this.normalize(venda.gerente);
+        return gerente && gerente === this.normalize(manager);
+      });
+    }
+  
+    // Filtro por supervisor
+    if (supervisor !== "all") {
+      filtered = filtered.filter(venda => {
+        const sup = this.normalize(venda.supervisor);
+        return sup && sup === this.normalize(supervisor);
+      });
+    }
+  
+    console.log("Vendas filtradas:", filtered);
+    
+    this.renderStateCards(filtered);
+    this.renderCharts(filtered);
+  }
+  
+  normalize(str) {
+    return (str || "")
+      .normalize("NFD") // Remove acentos
+      .replace(/[\u0300-\u036f]/g, "") // Remove diacríticos
+      .toLowerCase() // Converte para minúsculas
+      .trim(); // Remove espaços em branco
+  }
 
-    // Variáveis para métricas gerais
-    let ofertasCount = {};
-    let totalValor = 0;
-    let totalVendasConcluidas = 0;
-
-    // Meta diária por estado
-    const metaDiaria = {
-      'PERNAMBUCO': 316,
-      'BAHIA': 75,
-      'CEARÁ': 285,
-      'AMAZONAS': 100,
-      'MINAS GERAIS': 300,
-      'RIO DE JANEIRO': 75
-    };
-
-    const estadoData = {};
-
-    vendasFiltradas.forEach(venda => {
-      const estado = venda.estado;
-
-      // Inicializa os dados do estado, se necessário
-      if (!estadoData[estado]) {
-        estadoData[estado] = {
-          total: 0,
-          concluidas: 0,
-          emAndamento: 0,
-          biometriaTotal: 0,
-          biometriaAprovada: 0,
-          biometriaEmAndamento: 0,
-          biometriaNaoFez: 0,
-          biometriaReprovada: 0,
-          canceladas: 0,
-          emTratamento: 0,
-          emTratamentoCtop: 0,
-          reinput: 0,
-          meta: 0,
-          vendedores: []
-        };
-      }
-
-      // Contagem geral de vendas por estado
-      estadoData[estado].total++;
-
-      // Verifica se a venda foi concluída
-      if (venda.statusOrdem === 'CONCLUÍDO') {
-        estadoData[estado].concluidas++;
-        totalVendasConcluidas++;
-
-        // Soma o valor da venda concluída
-        totalValor += parseFloat(venda.valor) || 0;
-
-        // Conta a oferta da venda concluída
-        ofertasCount[venda.oferta] = (ofertasCount[venda.oferta] || 0) + 1;
-      }
-      if (venda.tipo === 'REINPUT') {
-        estadoData[estado].reinput++;
-      }
-      // Outros status
-      switch (venda.statusOrdem) {
-        case 'EM ANDAMENTO':
-          estadoData[estado].emAndamento++;
-          break;
-        case 'EM TRATAMENTO CTOP':
-          estadoData[estado].emTratamentoCtop++;
-          break;
-        case 'EM TRATAMENTO DOC/BIOMETRIA':
-          estadoData[estado].emTratamento++;
-          break;
-        case 'CANCELADA':
-          estadoData[estado].canceladas++;
-          break;
-      }
-
-      // Contagem de biometria
-      if (venda.biometria) {
-        estadoData[estado].biometriaTotal++;
-        switch (venda.biometria) {
-          case 'APROVADA':
-            estadoData[estado].biometriaAprovada++;
-            break;
-          case 'EM ANDAMENTO':
-            estadoData[estado].biometriaEmAndamento++;
-            break;
-          case 'NÃO FEZ':
-            estadoData[estado].biometriaNaoFez++;
-            break;
-          case 'REPROVADA':
-            estadoData[estado].biometriaReprovada++;
-            break;
-        }
-      }
-
-      // Adiciona vendedor ao estado
-      const vendedorExistente = estadoData[estado].vendedores.find(v => v.nome === venda.vendedor);
-      if (vendedorExistente) {
-        vendedorExistente.vendas++;
-      } else {
-        estadoData[estado].vendedores.push({
-          id: venda.id,
-          nome: venda.vendedor,
-          supervisor: venda.supervisor,
-          estado: venda.estado,
-          vendas: 1,
-          taxaConversao: 80 // Exemplo de taxa de conversão
-        });
-      }
-    });
-
-    // Calcula a meta atingida por estado
-    Object.keys(estadoData).forEach(estado => {
-      const meta = metaDiaria[estado] || 75; // Meta padrão
-      const concluidas = estadoData[estado].concluidas;
-      estadoData[estado].meta = Math.round((concluidas / meta) * 100);
-    });
-
-    // Calcula a oferta mais vendida
-    const ofertaMaisVendida = Object.entries(ofertasCount)
-      .sort(([, a], [, b]) => b - a)[0] || ['Nenhuma', 0];
-
-    // Calcula o ticket médio
-    const ticketMedio = totalVendasConcluidas > 0
-      ? (totalValor / totalVendasConcluidas).toFixed(2)
-      : 0;
-
-    // Armazena os dados
-    this.dados = {
-      ...estadoData,
-      metricas: {
-        ofertaMaisVendida: {
-          nome: ofertaMaisVendida[0],
-          quantidade: ofertaMaisVendida[1]
-        },
-        ticketMedio: ticketMedio
-      }
-    };
+  normalize(str) {
+    return (str || "").trim().toLowerCase();
   }
 
   filterByPeriod(vendas, period) {
-    const hoje = new Date();
-    hoje.setHours(23, 59, 59, 999); // Fim do dia atual
-
-    let inicioPeriodo = new Date(hoje);
-    inicioPeriodo.setHours(0, 0, 0, 0); // Início do dia atual
-
-    switch (period) {
-      case 'weekly':
-        inicioPeriodo.setDate(hoje.getDate() - hoje.getDay()); // Primeiro dia da semana (domingo)
-        break;
-      case 'monthly':
-        inicioPeriodo.setDate(1); // Primeiro dia do mês
-        break;
-      // Diário é o padrão
-    }
-
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
     return vendas.filter(venda => {
-      try {
-        const [dia, mes, ano] = venda.dataVenda.split('/');
-        const dataVenda = new Date(`${ano}-${mes}-${dia}`);
-        return dataVenda >= inicioPeriodo && dataVenda <= hoje;
-      } catch (e) {
-        console.error('Erro ao processar data da venda:', venda.dataVenda);
-        return false;
+      const dataVenda = this.parseDate(venda.dataVenda);
+      if (isNaN(dataVenda)) return false;
+      switch (period) {
+        case "daily":
+          return this.isSameDay(dataVenda, today);
+        case "weekly":
+          const startOfWeek = this.getStartOfWeek(today);
+          return dataVenda >= startOfWeek && dataVenda <= today;
+        case "monthly":
+          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          return dataVenda >= startOfMonth && dataVenda <= today;
+        default:
+          return true;
       }
     });
   }
 
-  renderStateCards() {
-    const stateCardsContainer = document.querySelector('.state-cards');
-    stateCardsContainer.innerHTML = ''; // Limpa antes de renderizar
+  parseDate(dateString) {
+    if (!dateString) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const [year, month, day] = dateString.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+    if (dateString.includes("-")) {
+      return new Date(dateString);
+    }
+    if (dateString.includes("/")) {
+      const [dia, mes, ano] = dateString.split("/");
+      return new Date(ano, mes - 1, dia);
+    }
+    return new Date(dateString);
+  }
 
-    const fragment = document.createDocumentFragment(); // Reduz operações no DOM
+  isSameDay(date1, date2) {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
+    return d1.getTime() === d2.getTime();
+  }
 
-    // Criar e adicionar métricas gerais
-    fragment.appendChild(this.createMetricsCard(this.dados?.metricas || {}));
+  getStartOfWeek(date) {
+    const start = new Date(date);
+    const day = start.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    start.setDate(start.getDate() - diff);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
 
-    // Criar e adicionar os cards de estados
-    Object.entries(this.dados || {}).forEach(([estado, dadosEstado]) => {
-      if (estado !== 'metricas') {
-        fragment.appendChild(this.createStateCard(estado, dadosEstado));
-      }
+  renderStateCards(filteredVendas) {
+    this.stateCardsContainer.innerHTML = "";
+    const uniqueStates = [...new Set(filteredVendas.map(venda => venda.estado))];
+    uniqueStates.forEach(state => {
+      const metrics = this.calculateStateMetrics(filteredVendas, state);
+      const card = this.createStateCard(state, metrics);
+      this.stateCardsContainer.appendChild(card);
     });
-
-    stateCardsContainer.appendChild(fragment);
-
-    // Chamar função para adicionar eventos apenas uma vez
     this.addBiometriaClickEvents();
   }
 
-  createMetricsCard(metricas) {
-    const metricsCard = document.createElement('div');
-    metricsCard.className = 'metrics-card';
-    metricsCard.innerHTML = `
-      <h3>Métricas Gerais</h3>
-      <div class="metrics-group">
-        <div class="metric">
-          <span>Oferta Mais Vendida</span>
-          <strong>${metricas.ofertaMaisVendida?.nome || 'N/A'}</strong>
-        </div>
-        <div class="metric">
-          <span>Ticket Médio</span>
-          <strong>R$ ${metricas.ticketMedio || '0.00'}</strong>
-        </div>
-      </div>
-    `;
-    return metricsCard;
+  calculateStateMetrics(vendas, state) {
+    const stateVendas = vendas.filter(v => v.estado === state);
+    const total = stateVendas.length;
+    const concluidas = stateVendas.filter(v => v.statusOrdem === "CONCLUÍDO").length;
+    const biometriaAprovada = stateVendas.filter(v => v.biometria === "APROVADA").length;
+    const emTratamentoCtop = stateVendas.filter(v => v.statusOrdem === "EM TRATAMENTO CTOP").length;
+    const emTratamento = stateVendas.filter(v => v.statusOrdem === "EM TRATAMENTO DOC/BIOMETRIA").length;
+    const emAndamento = stateVendas.filter(v => v.statusOrdem === "EM ANDAMENTO").length;
+    const canceladas = stateVendas.filter(v => v.statusOrdem === "CANCELADA").length;
+    const reinput = stateVendas.filter(v => v.tipo === "REINPUT").length; 
+    // Meta de vendas para o estado
+    const metaVendas = this.metasVendas[state] || 0; // Se não houver meta, use 0
+
+    // Percentual de vendas atingido
+    const percentualAtingido = metaVendas > 0 ? Math.round((total / metaVendas) * 100) : 0;
+    const percentualAtingidoDiario = percentualAtingido > 0 ? Math.round((metaVendas / percentualAtingido) * 100) : 0;
+    
+    return {
+      total,
+      concluidas,
+      biometriaAprovada,
+      emTratamentoCtop,
+      emTratamento,
+      emAndamento,
+      canceladas,
+      reinput,
+      metaVendas, // Meta de vendas
+      percentualAtingido ,
+      percentualAtingidoDiario
+    };
   }
 
   createStateCard(estado, dadosEstado) {
-    const card = document.createElement('div');
-    card.className = 'card';
-
-    // Define classe da meta
     const metaClass =
-      dadosEstado.meta >= 80 ? 'badge-success' :
-        dadosEstado.meta >= 70 ? 'badge-warning' : 'badge-error';
-
+      dadosEstado.percentualAtingido >= 80 ? "badge-success" :
+      dadosEstado.percentualAtingido >= 70 ? "badge-warning" : "badge-error";
+      dadosEstado.percentualAtingidoDiario >= 80 ? "badge-success" :
+      dadosEstado.percentualAtingidoDiario >= 70 ? "badge-warning" : "badge-error";
+    const card = document.createElement("div");
+    card.className = "card";
     card.innerHTML = `
       <h3>${estado}</h3>
       <div class="metric">
@@ -282,287 +226,268 @@ class DashboardApp {
         <span>Em Tratamento Doc/Biometria</span>
         <strong>${dadosEstado.emTratamento || 0}</strong>
       </div>
-       <div class="metric">
-        <span>Reinput</span>
-        <strong>${dadosEstado.reinput || 0}</strong>
-      </div>
       <div class="metric">
         <span>Em Andamento</span>
         <strong>${dadosEstado.emAndamento || 0}</strong>
       </div>
       <div class="metric">
+        <span>Reinput</span>
+        <strong>${dadosEstado.reinput || 0}</strong>
+      </div>
+      <div class="metric">
         <span>Canceladas</span>
         <strong>${dadosEstado.canceladas || 0}</strong>
       </div>
+       <div class="metric">
+        <span>Meta Atingida</span>
+        <div class="badge ${metaClass}">
+          ${dadosEstado.percentualAtingidoDiario || 0}%
+        </div>
       <div class="metric">
         <span>Meta Atingida</span>
         <div class="badge ${metaClass}">
-          ${dadosEstado.meta || 0}%
+          ${dadosEstado.percentualAtingido || 0}%
         </div>
       </div>
     `;
-
     return card;
   }
 
   addBiometriaClickEvents() {
-    const biometricElements = document.querySelectorAll('.biometria-clickable');
-
+    const biometricElements = document.querySelectorAll(".biometria-clickable");
     biometricElements.forEach(element => {
-      const periodSelect = element.querySelector('.period-select');
-
-      element.addEventListener('click', (event) => {
+      const periodSelect = element.querySelector(".period-select");
+      element.addEventListener("click", (event) => {
         event.stopPropagation();
-        // Oculta todos os outros selects antes de exibir o atual
-        document.querySelectorAll('.period-select').forEach(select => {
+        document.querySelectorAll(".period-select").forEach(select => {
           if (select !== periodSelect) {
-            select.classList.remove('visible');
+            select.classList.remove("visible");
           }
         });
-
-        // Alterna visibilidade do select
-        periodSelect.classList.toggle('visible');
+        periodSelect.classList.toggle("visible");
       });
-
-      // Evento de mudança no select para abrir modal
-      periodSelect.addEventListener('change', (event) => {
-        const estado = element.getAttribute('data-estado');
+      periodSelect.addEventListener("change", (event) => {
+        const estado = element.getAttribute("data-estado");
         const period = event.target.value;
         this.openBiometriaModal(estado, period);
-        periodSelect.classList.remove('visible');
+        periodSelect.classList.remove("visible");
       });
-
-      // Esconde selects ao clicar fora
-      document.addEventListener('click', (event) => {
+      document.addEventListener("click", (event) => {
         if (!element.contains(event.target)) {
-          periodSelect.classList.remove('visible');
+          periodSelect.classList.remove("visible");
         }
       });
     });
   }
 
-  async openBiometriaModal(estado, selectedPeriod = 'daily') {
-    const { data: vendas, error } = await supabase
-      .from('vendas')
-      .select('*');
-
+  async openBiometriaModal(estado, selectedPeriod = "daily") {
+    const { data: vendas, error } = await supabase.from("vendas").select("*");
     if (error) {
-      console.error('Erro ao buscar vendas:', error);
+      console.error("Erro ao buscar vendas:", error);
       return;
     }
-
     const vendasFiltradas = this.filterByPeriod(vendas, selectedPeriod);
     const estadoVendas = vendasFiltradas.filter(venda => venda.estado === estado);
-
-    const biometriaData = {
-      'APROVADA': 0,
-      'EM ANDAMENTO': 0,
-      'REPROVADA': 0,
-      'NÃO FEZ': 0
-    };
-
+    const biometriaData = { "APROVADA": 0, "EM ANDAMENTO": 0, "REPROVADA": 0, "NÃO FEZ": 0 };
     estadoVendas.forEach(venda => {
-      const status = venda.biometria || 'NÃO FEZ';
-      biometriaData[status]++;
+      const status = venda.biometria || "NÃO FEZ";
+      if (biometriaData.hasOwnProperty(status)) {
+        biometriaData[status]++;
+      }
     });
-
     const periodTitle = {
-      'daily': 'Hoje',
-      'weekly': 'Esta Semana',
-      'monthly': 'Este Mês'
+      "daily": "Hoje",
+      "weekly": "Esta Semana",
+      "monthly": "Este Mês"
     };
-
-    const modal = document.createElement('div');
-    modal.className = 'biometria-modal';
-    modal.style.opacity = '0';
+    const modal = document.createElement("div");
+    modal.className = "biometria-modal";
+    modal.style.opacity = "0";
     modal.innerHTML = `
       <div class="biometria-modal-content">
         <button class="close-btn">&times;</button>
         <h2>Status da Biometria</h2>
-        <div class="period-title">${estado} - ${periodTitle[selectedPeriod]}</div>
+        <div class="period-title">${estado} - ${periodTitle[selectedPeriod] || selectedPeriod}</div>
         <div class="biometria-stats">
           <div class="stat-item aprovada">
             <span>Aprovada</span>
-            <strong>${biometriaData['APROVADA']}</strong>
+            <strong>${biometriaData["APROVADA"]}</strong>
           </div>
           <div class="stat-item em-andamento">
             <span>Em Andamento</span>
-            <strong>${biometriaData['EM ANDAMENTO']}</strong>
+            <strong>${biometriaData["EM ANDAMENTO"]}</strong>
           </div>
           <div class="stat-item reprovada">
             <span>Reprovada</span>
-            <strong>${biometriaData['REPROVADA']}</strong>
+            <strong>${biometriaData["REPROVADA"]}</strong>
           </div>
           <div class="stat-item nao-fez">
             <span>Não Realizou</span>
-            <strong>${biometriaData['NÃO FEZ']}</strong>
+            <strong>${biometriaData["NÃO FEZ"]}</strong>
           </div>
         </div>
       </div>
     `;
-
     document.body.appendChild(modal);
-
-    // Add fade-in effect
     requestAnimationFrame(() => {
-      modal.style.opacity = '1';
+      modal.style.opacity = "1";
     });
-
-    // Closing functionality
     const closeModal = () => {
-      modal.style.opacity = '0';
+      modal.style.opacity = "0";
       setTimeout(() => {
         document.body.removeChild(modal);
       }, 300);
     };
-
-    const closeBtn = modal.querySelector('.close-btn');
-    closeBtn.addEventListener('click', closeModal);
-
-    modal.addEventListener('click', (e) => {
+    const closeBtn = modal.querySelector(".close-btn");
+    closeBtn.addEventListener("click", closeModal);
+    modal.addEventListener("click", (e) => {
       if (e.target === modal) {
         closeModal();
       }
     });
-
-    // Add escape key listener
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
+    const escListener = (e) => {
+      if (e.key === "Escape") {
         closeModal();
+        document.removeEventListener("keydown", escListener);
+      }
+    };
+    document.addEventListener("keydown", escListener);
+  }
+
+  renderCharts(filteredVendas) {
+    // Chart 1: Vendas por Estado (Bar Chart)
+    const stateCounts = {};
+    filteredVendas.forEach(venda => {
+      const state = venda.estado || "Desconhecido";
+      stateCounts[state] = (stateCounts[state] || 0) + 1;
+    });
+    const ctxState = document.getElementById("vendas-por-estado-chart").getContext("2d");
+    if (this.stateChart) { this.stateChart.destroy(); }
+    this.stateChart = new Chart(ctxState, {
+      type: "bar",
+      data: {
+        labels: Object.keys(stateCounts),
+        datasets: [{
+          label: "Vendas por Estado",
+          data: Object.values(stateCounts),
+          backgroundColor: "rgba(13, 71, 161, 0.7)"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
       }
     });
-  }
 
-  renderCharts() {
-    if (this.charts.vendasPorEstado) this.charts.vendasPorEstado.destroy();
-    if (this.charts.statusOrdens) this.charts.statusOrdens.destroy();
-    if (this.charts.metasEstados) this.charts.metasEstados.destroy();
-
-    const chartColors = [
-      "#2196F3",
-      "#1976D2",
-      "#1565C0",
-      "#0D47A1",
-      "#64B5F6",
-      "#42A5F5",
-      "#2196F3",
-      "#1E88E5",
-    ];
-
-    const chartConfig = {
-      plugins: {
-        legend: {
-          labels: { color: "var(--text-color)" },
-        },
-        title: {
-          color: "var(--text-color)",
-          font: { size: 16, weight: "bold" },
-        },
+    // Chart 2: Status das Ordens (Pie Chart)
+    const statusCounts = {};
+    filteredVendas.forEach(venda => {
+      const status = venda.statusOrdem || "Desconhecido";
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+    const ctxStatus = document.getElementById("status-ordens-chart").getContext("2d");
+    if (this.statusChart) { this.statusChart.destroy(); }
+    this.statusChart = new Chart(ctxStatus, {
+      type: "pie",
+      data: {
+        labels: Object.keys(statusCounts),
+        datasets: [{
+          label: "Status das Ordens",
+          data: Object.values(statusCounts),
+          backgroundColor: [
+            "rgba(76, 175, 80, 0.7)",    // ex: CONCLUÍDO
+            "rgba(33, 150, 243, 0.7)",   // ex: EM ANDAMENTO
+            "rgba(255, 193, 7, 0.7)",    // ex: EM TRATAMENTO DOC/BIOMETRIA
+            "rgba(156, 39, 176, 0.7)",   // ex: EM TRATAMENTO CTOP
+            "rgba(244, 67, 54, 0.7)",    // ex: CANCELADA
+            "rgba(120, 120, 120, 0.7)"   // fallback
+          ]
+        }]
       },
-      responsive: true,
-      maintainAspectRatio: false,
-    };
-
-    this.charts.vendasPorEstado = new Chart(
-      document.getElementById("vendas-por-estado-chart"),
-      {
-        type: "bar",
-        data: {
-          labels: Object.keys(this.dados).filter(key => key !== "metricas"),
-          datasets: [
-            {
-              label: "Vendas Concluídas",
-              data: Object.keys(this.dados)
-                .filter(key => key !== "metricas")
-                .map((estado) => this.dados[estado].concluidas),
-              backgroundColor: chartColors[0],
-            },
-          ],
-        },
-        options: {
-          ...chartConfig,
-          plugins: {
-            ...chartConfig.plugins,
-            title: { display: true, text: "Vendas por Estado" },
-          },
-        },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
       }
-    );
+    });
 
-    this.charts.statusOrdens = new Chart(
-      document.getElementById("status-ordens-chart"),
-      {
-        type: "doughnut",
-        data: {
-          labels: ["Concluídas", "Em Andamento", "Canceladas"],
-          datasets: [
-            {
-              data: [
-                Object.keys(this.dados)
-                  .filter(key => key !== "metricas")
-                  .reduce((acc, key) => acc + this.dados[key].concluidas, 0),
-                Object.keys(this.dados)
-                  .filter(key => key !== "metricas")
-                  .reduce((acc, key) => acc + this.dados[key].emAndamento, 0),
-                Object.keys(this.dados)
-                  .filter(key => key !== "metricas")
-                  .reduce((acc, key) => acc + this.dados[key].canceladas, 0),
-              ],
-              backgroundColor: chartColors.slice(0, 3),
-            },
-          ],
-        },
-        options: {
-          ...chartConfig,
-          plugins: {
-            ...chartConfig.plugins,
-            title: { display: true, text: "Status das Ordens" },
-          },
-        },
+    // Chart 3: Metas por Estado (Bar Chart showing meta percentage)
+    const stateMetrics = {};
+    filteredVendas.forEach(venda => {
+      const state = venda.estado || "Desconhecido";
+      if (!stateMetrics[state]) {
+        stateMetrics[state] = { total: 0, concluido: 0 };
       }
-    );
-
-    this.charts.metasEstados = new Chart(
-      document.getElementById("metas-estados-chart"),
-      {
-        type: "radar",
-        data: {
-          labels: Object.keys(this.dados).filter(key => key !== "metricas"),
-          datasets: [
-            {
-              label: "Meta Atingida (%)",
-              data: Object.keys(this.dados)
-                .filter(key => key !== "metricas")
-                .map((estado) => this.dados[estado].meta),
-              backgroundColor: "rgba(33, 150, 243, 0.2)",
-              borderColor: "rgba(33, 150, 243, 1)",
-              pointBackgroundColor: "rgba(33, 150, 243, 1)",
-              pointBorderColor: "#fff",
-            },
-          ],
-        },
-        options: {
-          ...chartConfig,
-          plugins: {
-            ...chartConfig.plugins,
-            title: { display: true, text: "Metas por Estado" },
-          },
-        },
+      stateMetrics[state].total++;
+      if (venda.statusOrdem === "CONCLUÍDO") {
+        stateMetrics[state].concluido++;
       }
-    );
-  }
-
-  subscribeToVendas() {
-    supabase
-      .from('vendas')
-      .on('UPDATE', payload => {
-        // Se a venda foi previamente categorizada como "REINPUT" e agora foi alterada para um tipo diferente:
-        if (payload.old && payload.new && payload.old.tipo === 'REINPUT' && payload.new.tipo !== 'REINPUT') {
-          console.log('Venda atualizada de REINPUT para outro tipo:', payload);
-          this.updateDashboard();
+    });
+    const stateMetas = {};
+    Object.keys(stateMetrics).forEach(state => {
+      const { total, concluido } = stateMetrics[state];
+      stateMetas[state] = total > 0 ? Math.round((concluido / total) * 100) : 0;
+    });
+    const ctxMeta = document.getElementById("metas-estados-chart").getContext("2d");
+    if (this.metaChart) { this.metaChart.destroy(); }
+    this.metaChart = new Chart(ctxMeta, {
+      type: "bar",
+      data: {
+        labels: Object.keys(stateMetas),
+        datasets: [{
+          label: "Meta Atingida (%)",
+          data: Object.values(stateMetas),
+          backgroundColor: "rgba(255, 87, 34, 0.7)"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            title: {
+              display: true,
+              text: "Percentual (%)"
+            }
+          }
         }
-      })
-      .subscribe();
+      }
+    });
+
+    // Chart 4: Biometria (Doughnut Chart for biometria status)
+    const biometriaCounts = { "APROVADA": 0, "EM ANDAMENTO": 0, "NÃO FEZ": 0, "REPROVADA": 0 };
+    filteredVendas.forEach(venda => {
+      const bio = venda.biometria || "NÃO FEZ";
+      if (biometriaCounts.hasOwnProperty(bio)) {
+        biometriaCounts[bio]++;
+      } else {
+        biometriaCounts[bio] = 1;
+      }
+    });
+    const ctxBio = document.getElementById("biometria-chart").getContext("2d");
+    if (this.biometriaChart) { this.biometriaChart.destroy(); }
+    this.biometriaChart = new Chart(ctxBio, {
+      type: "doughnut",
+      data: {
+        labels: Object.keys(biometriaCounts),
+        datasets: [{
+          label: "Status da Biometria",
+          data: Object.values(biometriaCounts),
+          backgroundColor: [
+            "rgba(76, 175, 80, 0.7)",   // APROVADA
+            "rgba(33, 150, 243, 0.7)",  // EM ANDAMENTO
+            "rgba(255, 152, 0, 0.7)",   // NÃO FEZ
+            "rgba(244, 67, 54, 0.7)"    // REPROVADA
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+    
   }
 }
 

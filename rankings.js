@@ -8,6 +8,7 @@ class RankingsApp {
     this.loadRankings();
   }
 
+  // Configura o seletor de meses
   setupMonthSelector() {
     const monthSelector = document.getElementById("month-selector");
     if (monthSelector) {
@@ -43,6 +44,7 @@ class RankingsApp {
     }
   }
 
+  // Carrega os rankings de supervisores e vendedores
   async loadRankings() {
     const startDate = new Date(this.currentYear, this.currentMonth - 1, 1)
       .toISOString()
@@ -92,6 +94,7 @@ class RankingsApp {
     this.renderVendedorRanking(vendedorRanking);
   }
 
+  // Renderiza o ranking de supervisores
   renderSupervisorRanking(ranking) {
     const container = document.querySelector(".supervisor-ranking");
     if (!container) return;
@@ -113,6 +116,7 @@ class RankingsApp {
     container.innerHTML = `<h3>Ranking de Supervisores</h3>${html}`;
   }
 
+  // Renderiza o ranking de vendedores
   renderVendedorRanking(ranking) {
     const container = document.querySelector(".vendedor-ranking");
     if (!container) return;
@@ -134,8 +138,9 @@ class RankingsApp {
     container.innerHTML = `<h3>Ranking de Vendedores</h3>${html}`;
   }
 
+  // Exibe uma mensagem de erro
   renderError(message) {
-    const container = document.querySelector(".rankings-container");
+    const container = document.querySelector(".ranking-section");
     if (container) {
       container.innerHTML = `<div class="error-message">${message}</div>`;
     }

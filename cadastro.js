@@ -9,8 +9,17 @@ class CadastroApp {
     this.setupSearchFilters();
     this.loadVendas();
     this.setupEditModal();
+    this.setupTableEvents(); 
+    this.notificationElement = document.getElementById("notification");
+    this.notificationMessage = document.getElementById("notification-message");
+  } 
+  showNotification(message, type = "success") {
+    this.notificationMessage.textContent = message;
+    this.notificationElement.className = `notification ${type} show`;
+    setTimeout(() => {
+      this.notificationElement.classList.remove("show");
+    }, 3000); // Oculta a notificação após 3 segundos
   }
-
   setupForm() {
     const form = document.getElementById("venda-form");
     if (form) {
@@ -30,6 +39,7 @@ class CadastroApp {
       cpf: form.querySelector("#cpf").value,
       vendedor: form.querySelector("#vendedor").value,
       supervisor: form.querySelector("#supervisor").value,
+      gerente: form.querySelector("#gerente").value,
       oferta: form.querySelector("#oferta").value,
       valor: form.querySelector("#valor").value,
       biometria: form.querySelector("#biometria").value,
@@ -55,19 +65,20 @@ class CadastroApp {
     console.log("Dados da venda a serem enviados:", venda);
 
     const { data, error } = await supabase
-      .from("vendas")
-      .insert([venda])
-      .select();
+    .from("vendas")
+    .insert([venda])
+    .select();
 
-    if (error) {
-      console.error("Erro ao salvar venda:", error);
-      alert("Erro ao salvar venda. Verifique o console para mais detalhes.");
-    } else {
-      console.log("Venda salva com sucesso:", data);
-      this.page = 1;
-      this.loadVendas();
-      form.reset();
-    }
+  if (error) {
+    console.error("Erro ao salvar venda:", error);
+    this.showNotification("Erro ao salvar venda. Verifique o console para mais detalhes.", "error");
+  } else {
+    console.log("Venda salva com sucesso:", data);
+    this.showNotification("Venda salva com sucesso!");
+    this.page = 1;
+    this.loadVendas();
+    form.reset();
+  }
   }
 
   async loadVendas() {
@@ -137,6 +148,7 @@ class CadastroApp {
         <td>${venda.cpf}</td>
         <td>${venda.vendedor}</td>
         <td>${venda.supervisor}</td>
+        <td>${venda.gerente}</td>
         <td>${venda.oferta}</td>
         <td>${venda.valor}</td>
         <td>${venda.biometria}</td>
@@ -147,6 +159,7 @@ class CadastroApp {
         <td>${venda.tipo}</td>
         <td>${venda.tipoCancelamento || "-"}</td>
         <td>${venda.estado}</td>
+        
         <td class="btn-actions">
           <button onclick="window.app.abrirModalEdicao(${venda.id})" class="action-btn edit-btn">
             <i class="material-icons">edit</i>Editar
@@ -167,21 +180,20 @@ class CadastroApp {
   }
 
   async abrirModalEdicao(id) {
+    console.log("ID da venda a ser editada:", id);
     const { data: venda, error } = await supabase
       .from("vendas")
       .select("*")
       .eq("id", id)
       .single();
-
     if (error) {
       console.error("Erro ao carregar venda para edição:", error);
       alert("Venda não encontrada.");
       return;
     }
-
+    console.log("Dados da venda carregados:", venda);
     const modal = document.getElementById("modal-edicao");
     const modalContent = modal.querySelector(".modal-content");
-
     const editForm = document.createElement("form");
     editForm.id = "edicao-venda-form";
     editForm.innerHTML = `
@@ -194,23 +206,17 @@ class CadastroApp {
         <button type="button" class="btn-secondary" onclick="document.getElementById('modal-edicao').style.display = 'none'">Cancelar</button>
       </div>
     `;
-
     editForm.addEventListener("submit", (e) => {
       e.preventDefault();
       this.salvarEdicaoVenda(id, editForm);
     });
-
     modalContent.innerHTML = "";
     modalContent.appendChild(editForm);
     modal.style.display = "block";
-
-    // Close modal if clicking outside the content
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        modal.style.display = "none";
-      }
-    });
+    // Removida a adição de listener duplicado para fechar o modal (será configurado uma única vez abaixo)
   }
+  
+
 
   createEditInputs(venda) {
     return Object.entries(venda)
@@ -304,7 +310,10 @@ class CadastroApp {
                 "Marcelo Vinicius Bernardo de Moura",
                 "Walcielison Candido de Andrade",
                 "Suzanne Suellen de Freitas",
-                "Parceiros",
+                "Crisleny Maria Claudino dos Santos",
+                "Kamilla Ribeiro",
+                "Jacilio Cabral de Melo Neto",
+                "Parceiros"
               ],
               biometria: [
                 "APROVADA",
@@ -367,64 +376,87 @@ class CadastroApp {
     for (let [key, value] of formData.entries()) {
       updatedVenda[key] = value;
     }
+  
     const { error } = await supabase
       .from("vendas")
       .update(updatedVenda)
       .eq("id", id);
+  
     if (error) {
       console.error("Erro ao atualizar venda:", error);
-      alert(
-        "Erro ao atualizar venda. Verifique o console para mais detalhes."
-      );
+      this.showNotification("Erro ao atualizar venda. Verifique o console para mais detalhes.", "error");
     } else {
+      this.showNotification("Venda atualizada com sucesso!");
       this.page = 1;
       this.loadVendas();
       document.getElementById("modal-edicao").style.display = "none";
+      window.dispatchEvent(new Event("saleUpdated"));
     }
   }
 
   async excluirVenda(id) {
+    // Remove modal de exclusão existente, se houver
+    const existingModal = document.querySelector(".password-modal");
+    if (existingModal) {
+      existingModal.remove();
+    }
+  
+    // Cria o novo modal de exclusão
     const passwordModal = document.createElement("div");
     passwordModal.classList.add("password-modal");
     passwordModal.innerHTML = `
       <div class="password-modal-content">
         <h3>Confirmação de Exclusão</h3>
         <p>Digite a senha para excluir a venda:</p>
-        <input type="password" id="exclusao-senha" class="senha-input" />
+        <input type="password" class="senha-input" /> <!-- Removido o ID fixo -->
         <div class="form-actions">
-          <button id="confirmar-exclusao" class="btn-primary">Confirmar</button>
-          <button id="cancelar-exclusao" class="btn-secondary">Cancelar</button>
+          <button class="btn-primary confirmar-exclusao">Confirmar</button>
+          <button class="btn-secondary cancelar-exclusao">Cancelar</button>
         </div>
       </div>
     `;
+  
+    // Adiciona o modal ao corpo da página
     document.body.appendChild(passwordModal);
-    const confirmarBtn = passwordModal.querySelector("#confirmar-exclusao");
-    const cancelarBtn = passwordModal.querySelector("#cancelar-exclusao");
-    const senhaInput = passwordModal.querySelector("#exclusao-senha");
-    const removeModal = () => document.body.removeChild(passwordModal);
-    cancelarBtn.addEventListener("click", removeModal);
+  
+    // Seleciona os elementos do modal
+    const confirmarBtn = passwordModal.querySelector(".confirmar-exclusao");
+    const cancelarBtn = passwordModal.querySelector(".cancelar-exclusao");
+    const senhaInput = passwordModal.querySelector(".senha-input");
+  
+    // Função para remover o modal
+    const removeModal = () => {
+      if (document.body.contains(passwordModal)) {
+        document.body.removeChild(passwordModal);
+      }
+    };
+  
+    // Configura o botão de cancelar
+    cancelarBtn.addEventListener("click", removeModal, { once: true });
+  
+    // Configura o botão de confirmar
     confirmarBtn.addEventListener("click", async () => {
       if (senhaInput.value === "AGS@2025") {
         const { error } = await supabase
           .from("vendas")
           .delete()
           .eq("id", id);
+  
         if (error) {
           console.error("Erro ao excluir venda:", error);
-          alert(
-            "Erro ao excluir venda. Verifique o console para mais detalhes."
-          );
+          this.showNotification("Erro ao excluir venda. Verifique o console para mais detalhes.", "error");
         } else {
+          this.showNotification("Venda excluída com sucesso!");
           this.page = 1;
           this.loadVendas();
+          window.dispatchEvent(new Event("saleUpdated"));
         }
         removeModal();
       } else {
-        alert("Senha incorreta!");
+        this.showNotification("Senha incorreta!", "error");
       }
-    });
+    }, { once: true });
   }
-
   setupSearchFilters() {
     const searchInput = document.getElementById("search-input");
     const searchField = document.getElementById("search-field");
@@ -443,14 +475,12 @@ class CadastroApp {
     searchButton.addEventListener("click", () => this.performSearch());
     clearSearchButton.addEventListener("click", () => this.clearSearch());
 
-    // Trigger search on pressing Enter
     searchInput.addEventListener("keyup", (event) => {
       if (event.key === "Enter") {
         this.performSearch();
       }
     });
 
-    // Automatically trigger search when user types with debounce
     searchInput.addEventListener("input", debounce(() => {
       this.performSearch();
     }, 300));
@@ -460,41 +490,46 @@ class CadastroApp {
     const searchInputValue = document.getElementById("search-input").value.trim();
     const searchFieldValue = document.getElementById("search-field").value;
     const searchPeriodValue = document.getElementById("search-period").value;
-
     const { data: vendas, error } = await supabase
       .from("vendas")
       .select("*")
       .order("dataVenda", { ascending: false });
-
     if (error) {
       console.error("Erro ao buscar dados do Supabase:", error);
       return;
     }
-
-    const normalizeText = (text) => {
-      return String(text)
-        .trim()
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]/g, "");
-    };
-
     let filteredVendas = vendas;
     if (searchInputValue) {
-      const searchWords = searchInputValue.split(/\s+/).map(word => normalizeText(word));
-      filteredVendas = vendas.filter(venda => {
-        const fieldContent = normalizeText(venda[searchFieldValue] || "");
+      const searchWords = searchInputValue
+        .split(/\s+/)
+        .map(word =>
+          String(word)
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+        );
+      filteredVendas = filteredVendas.filter(venda => {
+        const fieldContent = String(venda[searchFieldValue] || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
         return searchWords.every(word => fieldContent.includes(word));
       });
     }
-
     if (searchPeriodValue && searchPeriodValue !== "all") {
       filteredVendas = this.filterSearchByPeriod(filteredVendas, searchPeriodValue);
     }
-
+    // Adiciona filtro para biometria
+    const searchBiometriaValue = document.getElementById("search-biometria").value;
+    if (searchBiometriaValue !== "all") {
+      if (searchBiometriaValue === "aprovada") {
+        filteredVendas = filteredVendas.filter(venda => String(venda.biometria).toUpperCase() === "APROVADA");
+      } else if (searchBiometriaValue === "pendente") {
+        filteredVendas = filteredVendas.filter(venda => String(venda.biometria).toUpperCase() !== "APROVADA");
+      }
+    }
+    console.log("Dados filtrados:", filteredVendas);
     this.renderSearchResults(filteredVendas);
-    // Esconde o botão "Carregar Mais" durante a busca
     document.getElementById("load-more-btn").style.display = "none";
   }
 
@@ -556,19 +591,20 @@ class CadastroApp {
   }
 
   renderSearchResults(filteredVendas) {
+    const resultCountElem = document.getElementById("result-count");
+    if (resultCountElem) {
+      resultCountElem.textContent = `Resultados encontrados: ${filteredVendas.length}`;
+    }
     const tbody = document.getElementById("vendas-tbody");
     if (filteredVendas.length === 0) {
-      tbody.innerHTML = `
-      <tr>
-        <td colspan="17" style="text-align: center;">Nenhuma venda encontrada</td>
-      </tr>
-    `;
+      tbody.innerHTML =
+        '<tr><td colspan="17" style="text-align: center;">Nenhuma venda encontrada</td></tr>';
       return;
     }
     tbody.innerHTML = filteredVendas
       .map(
         (venda) => `
-      <tr>
+      <tr data-id="${venda.id}">
         <td>${venda.dataVenda}</td>
         <td>${venda.responsavel}</td>
         <td>${venda.cliente}</td>
@@ -576,6 +612,7 @@ class CadastroApp {
         <td>${venda.cpf}</td>
         <td>${venda.vendedor}</td>
         <td>${venda.supervisor}</td>
+        <td>${venda.gerente}</td>
         <td>${venda.oferta}</td>
         <td>${venda.valor}</td>
         <td>${venda.biometria}</td>
@@ -599,11 +636,30 @@ class CadastroApp {
       )
       .join("");
   }
-
+  setupTableEvents() {
+    const tbody = document.getElementById("vendas-tbody");
+    if (tbody) {
+      tbody.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target.classList.contains("edit-btn") || target.closest(".edit-btn")) {
+          const vendaId = target.closest("tr").getAttribute("data-id");
+          if (vendaId) {
+            this.abrirModalEdicao(vendaId);
+          }
+        } else if (target.classList.contains("delete-btn") || target.closest(".delete-btn")) {
+          const vendaId = target.closest("tr").getAttribute("data-id");
+          if (vendaId) {
+            this.excluirVenda(vendaId);
+          }
+        }
+      });
+    }
+  }
   clearSearch() {
     document.getElementById("search-input").value = "";
     document.getElementById("search-field").value = "cliente";
     document.getElementById("search-period").value = "all";
+    document.getElementById("result-count").textContent = "";
     this.renderVendasTable();
   }
 }

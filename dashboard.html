@@ -1,56 +1,84 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestão de Vendas - TIM Fibra - Dashboard</title>
-  
-  <!-- Charts -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
-  <!-- Material Icons -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="app-container">
-    <header>
-      <h1>AGS TELECOM - DASHBOARD</h1>
-      <nav>
-        <a href="index.html">Cadastro</a>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="rankings.html">Rankings</a>
-      </nav>
-    </header>
-    <main>
-      <section id="dashboard-section" class="active">
-        <div class="filters">
-          <select id="period-filter">
-            <option value="daily" selected>Diário</option>
-            <option value="weekly">Semanal</option>
-            <option value="monthly">Mensal</option>
-          </select>
-        </div>
-        <div class="state-cards"></div>
-        <div class="charts-grid">
-          <div class="chart-container">
-            <canvas id="vendas-por-estado-chart"></canvas>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Vendas - TIM Fibra - Dashboard</title>
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-container">
+      <header>
+        <h1>AGS TELECOM - DASHBOARD</h1>
+        <nav>
+          <a href="index.html">Cadastro</a>
+          <a href="dashboard.html">Dashboard</a>
+          <a href="rankings.html">Rankings</a>
+        </nav>
+      </header>
+      <main>
+        <section id="dashboard-section" class="active">
+          <div class="filters">
+            <label for="period-filter">Filtrar por período:</label>
+            <select id="period-filter">
+              <option value="daily" selected>Diário</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensal</option>
+            </select>
+            <label for="supervisor-filter">Filtrar por supervisor:</label>
+            <select id="supervisor-filter">
+              <option value="all" selected>Todos os Supervisores</option>
+              <option>Pâmela Ingrid de Moura Santos</option>
+              <option>Thaís Barbosa de Oliveira</option>
+              <option>Guilherme Fernando C. dos Santos</option>
+              <option>Alexsandra Gonçalves Cardoso</option>
+              <option>Antônio Marcos de Brito Silva</option>
+              <option>Genecy Germana Souza da Silva</option>
+              <option>Marcelo Vinicius Bernardo de Moura</option>
+              <option>Walcielison Candido de Andrade</option>
+              <option>Suzanne suellen de Freitas</option>
+              <option>Crisleny Maria Claudino dos Santos</option>
+              <option>Kamilla Ribeiro</option>
+              <option>Jacilio Cabral de Melo Neto</option>
+              <option>Parceiros</option>
+            </select>
+            <label for="manager-filter">Filtrar por gerente:</label>
+            <select id="manager-filter">
+              <option value="all" selected>Todos os Gerentes</option>
+              <option value="Taciana">Taciana</option>
+              <option value="Dourado">Dourado</option>
+            </select>
           </div>
-          <div class="chart-container">
-            <canvas id="status-ordens-chart"></canvas>
+          <h2 class="h2-super">VENDAS POR ESTADO</h2>
+          <div class="state-cards"></div>
+          <h2 class="h2-super">GRÁFICOS</h2>
+          <div class="charts-grid">
+            <div class="chart-container">
+              <canvas id="vendas-por-estado-chart"></canvas>
+            </div>
+            <div class="chart-container">
+              <canvas id="status-ordens-chart"></canvas>
+            </div>
+            <div class="chart-container">
+              <canvas id="metas-estados-chart"></canvas>
+            </div>
+            <div class="chart-container">
+              <canvas id="biometria-chart"></canvas>
+            </div>
           </div>
-          <div class="chart-container">
-            <canvas id="metas-estados-chart"></canvas>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-  <script type="module" src="dashboard.js"></script>
-  <script>
-    setInterval(() => {
-   window.location.reload();
- }, 1800000);
-</script>
-</body>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="dashboard.js"></script>
+    <script>
+      setInterval(() => {
+        window.location.reload();
+      }, 1800000);
+    </script>
+  </body>
 </html>
+

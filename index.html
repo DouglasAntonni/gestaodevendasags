@@ -59,14 +59,24 @@
                 <option>Pâmela Ingrid de Moura Santos</option>
                 <option>Thaís Barbosa de Oliveira</option>
                 <option>Guilherme Fernando C. dos Santos</option>
-                <option>Willian Gabriel de freitas souza</option>
                 <option>Alexsandra Gonçalves Cardoso</option>
                 <option>Antônio Marcos de Brito Silva</option>
                 <option>Genecy Germana Souza da Silva</option>
                 <option>Marcelo Vinicius Bernardo de Moura</option>
                 <option>Walcielison Candido de Andrade</option>
                 <option>Suzanne suellen de Freitas</option>
+                <option>Crisleny Maria Claudino dos Santos</option>
+                <option>Kamilla Ribeiro</option>
+                <option>Jacilio Cabral de Melo Neto</option>
                 <option>Parceiros</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="gerente">Gerente</label>
+              <select id="gerente" required>
+                <option value="">Selecione</option>
+                <option>Taciana</option>
+                <option>Dourado</option>
               </select>
             </div>
 
@@ -204,8 +214,11 @@
                 <option value="Raquel">Raquel</option>
                 <option value="Jana">Jana</option>
                 <option value="Andreza">Andreza</option>
-                <option value="Deivson">Deivson</option>
+                <option value="Edgar">Edgar</option>
                 <option value="Marcelo">Marcelo</option>
+                <option value="Luciene">Luciene</option>
+                <option value="Roseany">Roseany</option>
+                <option value="Mayara">Mayara</option>
               </select>
             </div>
             <div class="form-group">
@@ -282,10 +295,16 @@
               <option value="responsavel">Responsável</option>
               <option value="vendedor">Vendedor</option>
               <option value="supervisor">Supervisor</option>
+              <option value="gerente">Gerente</option>
               <option value="oferta">Oferta</option>
               <option value="estado">Estado</option>
               <option value="cpf">CPF</option>
               <option value="statusOrdem">Status Ordem</option>
+            </select>
+            <select id="search-biometria">
+              <option value="all">Todas as Biometrias</option>
+              <option value="aprovada">Aprovadas</option>
+              <option value="pendente">Pendentes</option>
             </select>
             <select id="search-period">
               <option value="all">Todos os Períodos</option>
@@ -296,39 +315,45 @@
             <button id="search-button" class="btn-primary">Buscar</button>
             <button id="clear-search" class="btn-secondary">Limpar</button>
           </div>
-          <table id="vendas-table">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Responsável</th>
-                <th>Cliente</th>
-                <th>Login</th>
-                <th>CPF</th>
-                <th>Vendedor</th>
-                <th>Supervisor</th>
-                <th>Oferta</th>
-                <th>Valor</th>
-                <th>Biometria</th>
-                <th>Ordem</th>
-                <th>Status Ordem</th>
-                <th>Sub-Status Ordem</th>
-                <th>Rede</th>
-                <th>Tipo</th>
-                <th>Tipo Cancelamento</th>
-                <th>Estado</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="vendas-tbody">
-              <!-- Vendas serão populadas via JS -->
-            </tbody>
-          </table>
+          <p id="result-count"></p>
+          <div class="table-container">
+            <table id="vendas-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Responsável</th>
+                  <th>Cliente</th>
+                  <th>Login</th>
+                  <th>CPF</th>
+                  <th>Vendedor</th>
+                  <th>Supervisor</th>
+                  <th>Gerente</th>
+                  <th>Oferta</th>
+                  <th>Valor</th>
+                  <th>Biometria</th>
+                  <th>Ordem</th>
+                  <th>Status Ordem</th>
+                  <th>Sub-Status Ordem</th>
+                  <th>Rede</th>
+                  <th>Tipo</th>
+                  <th>Tipo Cancelamento</th>
+                  <th>Estado</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="vendas-tbody">
+                <!-- Vendas serão populadas via JS -->
+              </tbody>
+            </table>
+          </div>
           <button id="load-more-btn" class="btn-primary" style="display:none;">Carregar Mais</button>
         </div>
       </section>
     </main>
   </div>
-
+  <div id="notification" class="notification">
+    <span id="notification-message"></span>
+  </div>
   <div id="modal-edicao" class="modal">
     <div class="modal-content">
       <!-- Conteúdo do modal de edição será preenchido via JS -->
@@ -342,8 +367,8 @@
   <script type="module" src="cadastro.js"></script>
   <script>
     setInterval(() => {
-   window.location.reload();
- }, 1800000);
-</script>
+      window.location.reload();
+    }, 1800000);
+  </script>
 </body>
 </html>
